@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
@@ -96,6 +97,11 @@ export default function MoodCheckinScreen() {
   };
 
   const canContinue = selected.size > 0;
+
+  const handleContinue = () => {
+    if (!canContinue) return;
+    router.push('/breathing');
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: ZColors.cream }}>
@@ -206,6 +212,7 @@ export default function MoodCheckinScreen() {
           activeOpacity={0.8}
           style={[s.continueBtn, { opacity: canContinue ? 1 : 0.45 }]}
           disabled={!canContinue}
+          onPress={handleContinue}
         >
           <Text style={s.continueBtnText}>Continue</Text>
           <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />

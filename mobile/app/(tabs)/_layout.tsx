@@ -39,16 +39,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Voice",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="record-voice-over" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
-        name="breathing"
+        name="voice"
         options={{
-          title: "Breathe",
+          title: "Voice",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="self-improvement" size={size} color={color} />
           ),

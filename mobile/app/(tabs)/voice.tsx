@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -32,11 +33,13 @@ const PHASE_COLORS: Record<PhaseKey, string> = {
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-export default function BreathingScreen() {
+export default function VoiceScreen() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [phaseIdx, setPhaseIdx] = useState(0);
-  const [countdown, setCountdown] = useState(4);
   const [cycles, setCycles] = useState(0);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const phaseRef = useRef(0);
 
@@ -64,41 +67,80 @@ export default function BreathingScreen() {
 
     animateToPhase(phaseRef.current);
 
-    const interval = setInterval(() => {
-      setCountdown(c => {
-        if (c <= 1) {
-          const nextIdx = (phaseRef.current + 1) % PHASES.length;
-          // Count a full cycle when we wrap back to inhale
-          if (nextIdx === 0) setCycles(prev => prev + 1);
-          phaseRef.current = nextIdx;
-          setPhaseIdx(nextIdx);
-          animateToPhase(nextIdx);
-          return PHASES[nextIdx].duration;
-        }
-        return c - 1;
-      });
-    }, 1000);
+    const timeout = setTimeout(() => {
+      const nextIdx = (phaseRef.current + 1) % PHASES.length;
+      if (nextIdx === 0) setCycles(prev => prev + 1);
+      phaseRef.current = nextIdx;
+      setPhaseIdx(nextIdx);
+      animateToPhase(nextIdx);
+    }, PHASES[phaseRef.current].duration * 1000);
 
-    return () => clearInterval(interval);
+    return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying]);
+  }, [isPlaying, phaseIdx]);
 
-  const handleStartStop = () => {
+  async function startRecording() {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        console.warn('Microphone permission was not granted');
+        return false;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording: nextRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+
+      setRecording(nextRecording);
+      setIsRecording(true);
+      return true;
+    } catch (err) {
+      console.error('Failed to start recording', err);
+      return false;
+    }
+  }
+
+  async function stopRecording() {
+    if (!recording) return;
+
+    try {
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      console.log('Recording stopped and stored at', uri);
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+    } finally {
+      setRecording(null);
+    }
+  }
+
+  const handleStartStop = async () => {
     if (isPlaying) {
       setIsPlaying(false);
+      await stopRecording();
     } else {
+      const didStartRecording = await startRecording();
+      if (!didStartRecording) return;
+
       phaseRef.current = 0;
       setPhaseIdx(0);
-      setCountdown(PHASES[0].duration);
+      setHasStarted(true);
       setIsPlaying(true);
     }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    await stopRecording();
     setIsPlaying(false);
     setPhaseIdx(0);
-    setCountdown(4);
     setCycles(0);
+    setHasStarted(false);
     scale.value = withTiming(0.68, { duration: 600 });
     glowOpacity.value = withTiming(0.12, { duration: 600 });
     outerScale.value = withTiming(0.6, { duration: 600 });
@@ -129,8 +171,8 @@ export default function BreathingScreen() {
         {/* ── Header ── */}
         <View style={s.header}>
           <View>
-            <Text style={s.title}>Box Breathing</Text>
-            <Text style={s.subtitle}>4 · 4 · 4 · 4 technique</Text>
+            <Text style={s.title}>Lisa</Text>
+            {/* <Text style={s.subtitle}>4 · 4 · 4 · 4 technique</Text> */}
           </View>
           {cycles > 0 && (
             <View style={s.cycleBadge}>
@@ -155,16 +197,11 @@ export default function BreathingScreen() {
             {/* Content */}
             <View style={s.ringContent}>
               {isPlaying ? (
-                <>
-                  <Text style={[s.phaseText, { color: ringColor }]}>
-                    {currentPhase.label}
-                  </Text>
-                  <Text style={[s.countdownText, { color: ringColor }]}>
-                    {countdown}
-                  </Text>
-                </>
+                <Text style={[s.recordingText, { color: ringColor }]}>
+                  Listening safely...
+                </Text>
               ) : (
-                <Text style={s.idleText}>Tap start{'\n'}to begin</Text>
+                !hasStarted && <Text style={s.idleText}>Tap start{'\n'}to begin</Text>
               )}
             </View>
           </Animated.View>
@@ -191,20 +228,15 @@ export default function BreathingScreen() {
           ))}
         </View>
 
-        {/* ── Phase Label ── */}
-        {isPlaying && (
-          <Text style={s.phaseLabel}>{currentPhase.label}</Text>
-        )}
-
         {/* ── Tip Card ── */}
-        {!isPlaying && (
+        {/* {!isPlaying && (
           <View style={s.tipCard}>
             <MaterialIcons name="lightbulb-outline" size={14} color="rgba(255,255,255,0.4)" />
             <Text style={s.tipText}>
               Focus on the ring. Inhale as it expands, exhale as it contracts.
             </Text>
           </View>
-        )}
+        )} */}
 
         {/* ── Spacer ── */}
         <View style={{ flex: 1 }} />
@@ -231,7 +263,7 @@ export default function BreathingScreen() {
               color="rgba(255,255,255,0.85)"
             />
             <Text style={[s.bottomBtnText, { color: 'rgba(255,255,255,0.85)' }]}>
-              {isPlaying ? 'Pause' : 'Start'}
+              {isRecording ? 'Pause' : 'Start'}
             </Text>
           </TouchableOpacity>
 
@@ -335,6 +367,12 @@ const s = StyleSheet.create({
   phaseText: {
     fontSize: 16,
     fontWeight: '400',
+    letterSpacing: 0.2,
+    textAlign: 'center',
+  },
+  recordingText: {
+    fontSize: 18,
+    fontWeight: '600',
     letterSpacing: 0.2,
     textAlign: 'center',
   },
