@@ -112,17 +112,20 @@ export default function VoiceScreen() {
     }
   }
 
-  async function stopRecording() {
-    if (!recording) return;
+  async function stopRecording(): Promise<string | null> {
+    if (!recording) return lastRecordingUri;
 
     try {
       setIsRecording(false);
       await recording.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
       const uri = recording.getURI();
       console.log('Recording stopped and stored at', uri);
       if (uri) setLastRecordingUri(uri);
+      return uri;
     } catch (err) {
       console.error('Failed to stop recording', err);
+      return null;
     } finally {
       setRecording(null);
     }
@@ -144,7 +147,7 @@ export default function VoiceScreen() {
   };
 
   const handleReset = async () => {
-    await stopRecording();
+    const recordingUri = await stopRecording();
     setIsPlaying(false);
     setPhaseIdx(0);
     setCycles(0);
@@ -156,8 +159,9 @@ export default function VoiceScreen() {
     outerOpacity.value = withTiming(0.04, { duration: 600 });
 
     // Upload recording and navigate to chat
-    if (lastRecordingUri) {
-      await uploadAndNavigateToChat(lastRecordingUri);
+    const audioUri = recordingUri ?? lastRecordingUri;
+    if (audioUri) {
+      await uploadAndNavigateToChat(audioUri);
     }
   };
 
@@ -169,7 +173,7 @@ export default function VoiceScreen() {
     try {
       const moods = params.moods ? JSON.parse(params.moods) : [];
       const convRes = await startConversation(auth.session.token, moods);
-      const result = await sendVoiceMessage(
+      await sendVoiceMessage(
         auth.session.token,
         convRes.conversationId,
         audioUri

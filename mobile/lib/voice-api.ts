@@ -1,4 +1,4 @@
-const VOICE_API_URL = "http://172.16.36.95:4001";
+import { VOICE_API_URL } from "./api-config";
 
 export class VoiceApiError extends Error {
   status: number;
