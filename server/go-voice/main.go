@@ -27,6 +27,11 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Run migrations
+	if err := db.Migrate(pool); err != nil {
+		log.Printf("Warning: migration failed (may already exist): %v", err)
+	}
+
 	ctx := context.Background()
 
 	// Initialize services
@@ -43,6 +48,7 @@ func main() {
 
 	voiceSvc := services.NewVoiceService(pool, deepgramSvc, geminiSvc, uploadDir)
 	voiceHandler := handlers.NewVoiceHandler(voiceSvc, uploadDir)
+	wsHandler := handlers.NewWSHandler(pool, voiceSvc, deepgramSvc, geminiSvc)
 
 	// Setup router
 	r := chi.NewRouter()
@@ -53,6 +59,9 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"ok": true}`))
 	})
+
+	// WebSocket route (auth via query param)
+	r.Get("/voice/ws", wsHandler.HandleWebSocket)
 
 	// Voice routes (authenticated)
 	r.Route("/voice", func(r chi.Router) {

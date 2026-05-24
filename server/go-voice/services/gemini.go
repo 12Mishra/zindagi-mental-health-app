@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"google.golang.org/genai"
@@ -78,4 +79,45 @@ func (g *GeminiService) GenerateResponse(ctx context.Context, history []models.M
 	}
 
 	return result.Candidates[0].Content.Parts[0].Text, nil
+}
+
+// GenerateResponseStream streams Gemini response chunks to a channel.
+func (g *GeminiService) GenerateResponseStream(ctx context.Context, history []models.Message, userMessage string, moods []string, out chan<- string) {
+	defer close(out)
+
+	var contents []*genai.Content
+
+	if len(history) == 0 && len(moods) > 0 {
+		moodContext := fmt.Sprintf("The user selected these moods during check-in: %s. Acknowledge this gently.", strings.Join(moods, ", "))
+		contents = append(contents, genai.NewContentFromText(moodContext, genai.RoleUser))
+		contents = append(contents, genai.NewContentFromText("I understand. I'm here for you. How are you feeling right now?", genai.RoleModel))
+	}
+
+	for _, msg := range history {
+		var role genai.Role = genai.RoleUser
+		if msg.Role == "ASSISTANT" {
+			role = genai.RoleModel
+		}
+		contents = append(contents, genai.NewContentFromText(msg.Content, role))
+	}
+
+	contents = append(contents, genai.NewContentFromText(userMessage, genai.RoleUser))
+
+	stream := g.client.Models.GenerateContentStream(ctx, "gemini-2.5-flash", contents, &genai.GenerateContentConfig{
+		SystemInstruction: genai.NewContentFromText(systemPrompt, genai.RoleUser),
+		MaxOutputTokens:   150,
+	})
+
+	for resp, err := range stream {
+		if err != nil {
+			log.Printf("Gemini stream error: %v", err)
+			return
+		}
+		if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
+			text := resp.Candidates[0].Content.Parts[0].Text
+			if text != "" {
+				out <- text
+			}
+		}
+	}
 }

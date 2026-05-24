@@ -137,6 +137,62 @@ func (v *VoiceService) ProcessVoiceMessage(ctx context.Context, userID, conversa
 	}, nil
 }
 
+// VerifyOwnership checks that a conversation belongs to the given user.
+func (v *VoiceService) VerifyOwnership(ctx context.Context, userID, conversationID string) error {
+	var ownerID string
+	err := v.pool.QueryRow(ctx,
+		`SELECT "userId" FROM "Conversation" WHERE "id" = $1`, conversationID,
+	).Scan(&ownerID)
+	if err != nil {
+		return fmt.Errorf("conversation not found")
+	}
+	if ownerID != userID {
+		return fmt.Errorf("unauthorized")
+	}
+	return nil
+}
+
+// StoreMessage inserts a message and returns its ID.
+func (v *VoiceService) StoreMessage(ctx context.Context, conversationID, role, content, audioURL string) (string, error) {
+	var msgID string
+	err := v.pool.QueryRow(ctx,
+		`INSERT INTO "Message" ("id", "conversationId", "role", "content", "audioUrl")
+		 VALUES (gen_random_uuid()::text, $1, $2, $3, NULLIF($4, ''))
+		 RETURNING "id"`,
+		conversationID, role, content, audioURL,
+	).Scan(&msgID)
+	if err != nil {
+		return "", fmt.Errorf("failed to store message: %w", err)
+	}
+	return msgID, nil
+}
+
+// GetMoods returns the mood selections for a conversation.
+func (v *VoiceService) GetMoods(ctx context.Context, conversationID string) ([]string, error) {
+	var moods []string
+	err := v.pool.QueryRow(ctx,
+		`SELECT "moods" FROM "Conversation" WHERE "id" = $1`, conversationID,
+	).Scan(&moods)
+	if err != nil {
+		return []string{}, err
+	}
+	return moods, nil
+}
+
+// SaveAudioFile writes audio bytes to disk.
+func (v *VoiceService) SaveAudioFile(ctx context.Context, msgID string, audioData []byte) error {
+	audioPath := filepath.Join(v.uploadDir, msgID+".mp3")
+	return os.WriteFile(audioPath, audioData, 0644)
+}
+
+// UpdateAudioURL sets the audioUrl field on a message.
+func (v *VoiceService) UpdateAudioURL(ctx context.Context, msgID, audioURL string) error {
+	_, err := v.pool.Exec(ctx,
+		`UPDATE "Message" SET "audioUrl" = $1 WHERE "id" = $2`, audioURL, msgID,
+	)
+	return err
+}
+
 // GetMessages fetches all messages for a conversation.
 func (v *VoiceService) GetMessages(ctx context.Context, conversationID string) ([]models.Message, error) {
 	rows, err := v.pool.Query(ctx,
