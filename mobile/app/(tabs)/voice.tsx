@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,6 +13,8 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ZColors } from '@/constants/zindagi-theme';
+import { getAuthSession } from '@/lib/auth-session';
+import { sendVoiceMessage, startConversation } from '@/lib/voice-api';
 
 // ── Phase config ──────────────────────────────────────────────────────────────
 
@@ -34,12 +37,16 @@ const PHASE_COLORS: Record<PhaseKey, string> = {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function VoiceScreen() {
+  const params = useLocalSearchParams<{ moods?: string }>();
   const [isPlaying, setIsPlaying] = useState(false);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [cycles, setCycles] = useState(0);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [sessionEnded, setSessionEnded] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [lastRecordingUri, setLastRecordingUri] = useState<string | null>(null);
 
   const phaseRef = useRef(0);
 
@@ -141,10 +148,18 @@ export default function VoiceScreen() {
     setPhaseIdx(0);
     setCycles(0);
     setHasStarted(false);
+    setSessionEnded(true);
     scale.value = withTiming(0.68, { duration: 600 });
     glowOpacity.value = withTiming(0.12, { duration: 600 });
     outerScale.value = withTiming(0.6, { duration: 600 });
     outerOpacity.value = withTiming(0.04, { duration: 600 });
+  };
+
+  const navigateToChat = () => {
+    router.push({
+      pathname: '/(tabs)/chat',
+      params: { moods: params.moods ?? '[]' },
+    });
   };
 
   const currentPhase = PHASES[phaseIdx];
@@ -243,38 +258,73 @@ export default function VoiceScreen() {
 
         {/* ── Bottom Buttons ── */}
         <View style={s.bottomBar}>
-          <TouchableOpacity
-            style={[s.bottomBtn, s.bottomBtnSecondary]}
-            activeOpacity={0.7}
-            onPress={() => {}}
-          >
-            <MaterialIcons name="phone-in-talk" size={15} color="rgba(255,255,255,0.5)" />
-            <Text style={s.bottomBtnText}>Crisis Support</Text>
-          </TouchableOpacity>
+          {sessionEnded ? (
+            <>
+              <TouchableOpacity
+                style={[s.bottomBtn, s.bottomBtnSecondary]}
+                activeOpacity={0.7}
+                onPress={() => {}}
+              >
+                <MaterialIcons name="phone-in-talk" size={15} color="rgba(255,255,255,0.5)" />
+                <Text style={s.bottomBtnText}>Crisis Support</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[s.bottomBtn, s.bottomBtnPrimary]}
-            activeOpacity={0.75}
-            onPress={handleStartStop}
-          >
-            <MaterialIcons
-              name={isPlaying ? 'pause' : 'play-arrow'}
-              size={18}
-              color="rgba(255,255,255,0.85)"
-            />
-            <Text style={[s.bottomBtnText, { color: 'rgba(255,255,255,0.85)' }]}>
-              {isRecording ? 'Pause' : 'Start'}
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.bottomBtn, s.bottomBtnPrimary]}
+                activeOpacity={0.75}
+                onPress={navigateToChat}
+              >
+                <MaterialIcons name="chat" size={18} color="rgba(255,255,255,0.85)" />
+                <Text style={[s.bottomBtnText, { color: 'rgba(255,255,255,0.85)' }]}>
+                  Chat with Lisa
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[s.bottomBtn, s.bottomBtnSecondary]}
-            activeOpacity={0.7}
-            onPress={handleReset}
-          >
-            <MaterialIcons name="close" size={15} color="rgba(255,255,255,0.5)" />
-            <Text style={s.bottomBtnText}>End Session</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.bottomBtn, s.bottomBtnSecondary]}
+                activeOpacity={0.7}
+                onPress={() => setSessionEnded(false)}
+              >
+                <MaterialIcons name="refresh" size={15} color="rgba(255,255,255,0.5)" />
+                <Text style={s.bottomBtnText}>New Session</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[s.bottomBtn, s.bottomBtnSecondary]}
+                activeOpacity={0.7}
+                onPress={() => {}}
+              >
+                <MaterialIcons name="phone-in-talk" size={15} color="rgba(255,255,255,0.5)" />
+                <Text style={s.bottomBtnText}>Crisis Support</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.bottomBtn, s.bottomBtnPrimary]}
+                activeOpacity={0.75}
+                onPress={handleStartStop}
+              >
+                <MaterialIcons
+                  name={isPlaying ? 'pause' : 'play-arrow'}
+                  size={18}
+                  color="rgba(255,255,255,0.85)"
+                />
+                <Text style={[s.bottomBtnText, { color: 'rgba(255,255,255,0.85)' }]}>
+                  {isRecording ? 'Pause' : 'Start'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.bottomBtn, s.bottomBtnSecondary]}
+                activeOpacity={0.7}
+                onPress={handleReset}
+              >
+                <MaterialIcons name="close" size={15} color="rgba(255,255,255,0.5)" />
+                <Text style={s.bottomBtnText}>End Session</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </SafeAreaView>
     </View>
