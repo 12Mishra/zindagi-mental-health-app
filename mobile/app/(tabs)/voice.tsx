@@ -120,6 +120,7 @@ export default function VoiceScreen() {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       console.log('Recording stopped and stored at', uri);
+      if (uri) setLastRecordingUri(uri);
     } catch (err) {
       console.error('Failed to stop recording', err);
     } finally {
@@ -153,6 +154,41 @@ export default function VoiceScreen() {
     glowOpacity.value = withTiming(0.12, { duration: 600 });
     outerScale.value = withTiming(0.6, { duration: 600 });
     outerOpacity.value = withTiming(0.04, { duration: 600 });
+
+    // Upload recording and navigate to chat
+    if (lastRecordingUri) {
+      await uploadAndNavigateToChat(lastRecordingUri);
+    }
+  };
+
+  const uploadAndNavigateToChat = async (audioUri: string) => {
+    const auth = getAuthSession();
+    if (!auth) return;
+
+    setIsUploading(true);
+    try {
+      const moods = params.moods ? JSON.parse(params.moods) : [];
+      const convRes = await startConversation(auth.session.token, moods);
+      const result = await sendVoiceMessage(
+        auth.session.token,
+        convRes.conversationId,
+        audioUri
+      );
+
+      router.push({
+        pathname: '/(tabs)/chat',
+        params: { conversationId: convRes.conversationId },
+      });
+    } catch (err) {
+      console.error('Failed to upload recording:', err);
+      // Still navigate to chat even if upload fails
+      router.push({
+        pathname: '/(tabs)/chat',
+        params: { moods: params.moods ?? '[]' },
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const navigateToChat = () => {
@@ -258,7 +294,14 @@ export default function VoiceScreen() {
 
         {/* ── Bottom Buttons ── */}
         <View style={s.bottomBar}>
-          {sessionEnded ? (
+          {isUploading ? (
+            <View style={[s.bottomBtn, s.bottomBtnPrimary, { opacity: 0.7 }]}>
+              <MaterialIcons name="hourglass-top" size={18} color="rgba(255,255,255,0.85)" />
+              <Text style={[s.bottomBtnText, { color: 'rgba(255,255,255,0.85)' }]}>
+                Processing...
+              </Text>
+            </View>
+          ) : sessionEnded ? (
             <>
               <TouchableOpacity
                 style={[s.bottomBtn, s.bottomBtnSecondary]}
@@ -283,7 +326,10 @@ export default function VoiceScreen() {
               <TouchableOpacity
                 style={[s.bottomBtn, s.bottomBtnSecondary]}
                 activeOpacity={0.7}
-                onPress={() => setSessionEnded(false)}
+                onPress={() => {
+                  setSessionEnded(false);
+                  setLastRecordingUri(null);
+                }}
               >
                 <MaterialIcons name="refresh" size={15} color="rgba(255,255,255,0.5)" />
                 <Text style={s.bottomBtnText}>New Session</Text>
