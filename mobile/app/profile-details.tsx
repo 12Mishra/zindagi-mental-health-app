@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
@@ -19,10 +19,15 @@ import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 const SEX_OPTIONS = ['Female', 'Male', 'Non-binary', 'Prefer not to say'];
 
 export default function ProfileDetailsScreen() {
+  const params = useLocalSearchParams<{
+    phoneNumber?: string;
+    otp?: string;
+  }>();
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
   const [college, setCollege] = useState('');
   const [sex, setSex] = useState('');
+  const [error, setError] = useState('');
 
   const canContinue =
     fullName.trim().length > 1 &&
@@ -32,7 +37,24 @@ export default function ProfileDetailsScreen() {
 
   const handleContinue = () => {
     if (!canContinue) return;
-    router.push('./history');
+
+    if (!params.phoneNumber || !params.otp) {
+      setError('Phone verification is missing. Please go back and verify your number again.');
+      return;
+    }
+
+    setError('');
+    router.push({
+      pathname: './history',
+      params: {
+        phoneNumber: params.phoneNumber,
+        otp: params.otp,
+        fullName: fullName.trim(),
+        age: age.replace(/\D/g, ''),
+        college: college.trim(),
+        sex,
+      },
+    });
   };
 
   return (
@@ -109,6 +131,13 @@ export default function ProfileDetailsScreen() {
               </View>
             </View>
           </View>
+
+          {error ? (
+            <View style={s.errorBox}>
+              <MaterialIcons name="error-outline" size={15} color={ZColors.coralDeep} />
+              <Text style={s.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity
             activeOpacity={0.8}
@@ -240,6 +269,15 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   choiceTextSelected: { color: ZColors.cream },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: ZColors.coralLight,
+    borderRadius: ZRadius.small,
+    padding: 10,
+  },
+  errorText: { flex: 1, fontSize: 12, color: ZColors.coralDeep, fontWeight: '700' },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',

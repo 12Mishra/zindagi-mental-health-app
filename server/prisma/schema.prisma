@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Sex {
+  FEMALE
+  MALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+model User {
+  id             String    @id @default(uuid())
+  phoneNumber    String    @unique
+  fullName       String
+  age            Int
+  college        String
+  sex            Sex
+  history        String[]  @default([])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  otpRequests    OtpRequest[]
+  sessions       Session[]
+
+  @@index([phoneNumber])
+}
+
+model OtpRequest {
+  id          String    @id @default(uuid())
+  phoneNumber String
+  otpHash     String
+  consumedAt  DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phoneNumber, createdAt])
+}
+
+model Session {
+  id            String    @id @default(uuid())
+  tokenHash     String    @unique
+  userAgent     String?
+  ipAddress     String?
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}

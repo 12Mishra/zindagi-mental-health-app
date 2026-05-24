@@ -1,11 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { registerWithOtp } from '@/lib/auth-api';
+import { setAuthSession } from '@/lib/auth-session';
 
 const HISTORY_OPTIONS = [
   'Stress',
@@ -23,7 +25,17 @@ const HISTORY_OPTIONS = [
 ];
 
 export default function HistoryScreen() {
+  const params = useLocalSearchParams<{
+    phoneNumber?: string;
+    otp?: string;
+    fullName?: string;
+    age?: string;
+    college?: string;
+    sex?: string;
+  }>();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const toggle = (option: string) => {
     setSelected(prev => {
@@ -40,8 +52,38 @@ export default function HistoryScreen() {
     });
   };
 
-  const handleFinish = () => {
-    router.replace('/(tabs)/mood-checkin');
+  const handleFinish = async () => {
+    if (
+      !params.phoneNumber ||
+      !params.otp ||
+      !params.fullName ||
+      !params.age ||
+      !params.college ||
+      !params.sex
+    ) {
+      setError('Profile details are missing. Please go back and complete your profile again.');
+      return;
+    }
+
+    try {
+      setError('');
+      setIsSubmitting(true);
+      const result = await registerWithOtp({
+        phoneNumber: params.phoneNumber,
+        otp: params.otp,
+        fullName: params.fullName,
+        age: Number(params.age),
+        college: params.college,
+        sex: params.sex,
+        history: Array.from(selected),
+      });
+      setAuthSession(result);
+      router.replace('/(tabs)/mood-checkin');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete registration.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -116,8 +158,20 @@ export default function HistoryScreen() {
           </View>
         )}
 
-        <TouchableOpacity activeOpacity={0.8} onPress={handleFinish} style={s.primaryBtn}>
-          <Text style={s.primaryText}>Finish setup</Text>
+        {error ? (
+          <View style={s.errorBox}>
+            <MaterialIcons name="error-outline" size={15} color={ZColors.coralDeep} />
+            <Text style={s.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          disabled={isSubmitting}
+          onPress={handleFinish}
+          style={[s.primaryBtn, { opacity: isSubmitting ? 0.45 : 1 }]}
+        >
+          <Text style={s.primaryText}>{isSubmitting ? 'Creating account...' : 'Finish setup'}</Text>
           <MaterialIcons name="arrow-forward" size={18} color={ZColors.cream} />
         </TouchableOpacity>
 
@@ -204,6 +258,15 @@ const s = StyleSheet.create({
     padding: 12,
   },
   hintText: { flex: 1, fontSize: 12, color: ZColors.textMuted, lineHeight: 17 },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: ZColors.coralLight,
+    borderRadius: ZRadius.small,
+    padding: 10,
+  },
+  errorText: { flex: 1, fontSize: 12, color: ZColors.coralDeep, fontWeight: '700' },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',

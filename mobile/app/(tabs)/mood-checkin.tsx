@@ -1,17 +1,19 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import { MaterialIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useState } from "react";
 import {
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { ZColors, ZRadius, ZShadow } from "@/constants/zindagi-theme";
+import { logout } from "@/lib/auth-api";
+import { clearAuthSession, getAuthSession } from "@/lib/auth-session";
 
 // ── Mood data ─────────────────────────────────────────────────────────────────
 
@@ -25,70 +27,96 @@ type Mood = {
 
 const MOODS: Mood[] = [
   {
-    id: 'anxious',
-    label: 'Anxious',
-    baseColor: 'rgba(168, 184, 155, 0.35)',
+    id: "anxious",
+    label: "Anxious",
+    baseColor: "rgba(168, 184, 155, 0.35)",
     textColor: ZColors.forest,
     selectedBg: ZColors.olive,
   },
   {
-    id: 'angry',
-    label: 'Angry',
-    baseColor: 'rgba(107, 124, 79, 0.22)',
+    id: "angry",
+    label: "Angry",
+    baseColor: "rgba(107, 124, 79, 0.22)",
     textColor: ZColors.forest,
     selectedBg: ZColors.forest,
   },
   {
-    id: 'sad',
-    label: 'Sad',
-    baseColor: 'rgba(212, 227, 200, 0.6)',
+    id: "sad",
+    label: "Sad",
+    baseColor: "rgba(212, 227, 200, 0.6)",
     textColor: ZColors.textSecondary,
     selectedBg: ZColors.sageMid,
   },
   {
-    id: 'fatigued',
-    label: 'Fatigued',
-    baseColor: 'rgba(212, 227, 200, 0.35)',
+    id: "fatigued",
+    label: "Fatigued",
+    baseColor: "rgba(212, 227, 200, 0.35)",
     textColor: ZColors.textSecondary,
     selectedBg: ZColors.sage,
   },
   {
-    id: 'unsafe',
-    label: 'Unsafe',
-    baseColor: 'rgba(255, 179, 167, 0.35)',
+    id: "unsafe",
+    label: "Unsafe",
+    baseColor: "rgba(255, 179, 167, 0.35)",
     textColor: ZColors.coralDeep,
     selectedBg: ZColors.coralDeep,
   },
   {
-    id: 'overwhelmed',
-    label: 'Overwhelmed',
-    baseColor: 'rgba(107, 124, 79, 0.18)',
+    id: "overwhelmed",
+    label: "Overwhelmed",
+    baseColor: "rgba(107, 124, 79, 0.18)",
     textColor: ZColors.forest,
     selectedBg: ZColors.oliveDark,
   },
   {
-    id: 'calm',
-    label: 'Calm',
-    baseColor: 'rgba(143, 170, 130, 0.4)',
+    id: "calm",
+    label: "Calm",
+    baseColor: "rgba(143, 170, 130, 0.4)",
     textColor: ZColors.forest,
     selectedBg: ZColors.sageMid,
   },
   {
-    id: 'okay',
-    label: 'Okay',
-    baseColor: 'rgba(168, 184, 155, 0.5)',
+    id: "okay",
+    label: "Okay",
+    baseColor: "rgba(168, 184, 155, 0.5)",
     textColor: ZColors.textSecondary,
     selectedBg: ZColors.olive,
   },
 ];
 
 // ── Screen ────────────────────────────────────────────────────────────────────
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  const authInfo = getAuthSession();
+  const name = authInfo?.user.fullName.split(" ")[0] || "";
+
+  let greeting = "";
+
+  if (hour < 12) {
+    greeting = "Good Morning";
+  } else if (hour < 17) {
+    greeting = "Good Afternoon";
+  } else if (hour < 21) {
+    greeting = "Good Evening";
+  } else {
+    greeting = "Good Night";
+  }
+
+  return `${greeting}${name ? `, ${name}` : ""}`;
+};
+const formattedDate = new Date().toLocaleDateString("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+});
 
 export default function MoodCheckinScreen() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const toggle = (id: string) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -100,7 +128,27 @@ export default function MoodCheckinScreen() {
 
   const handleContinue = () => {
     if (!canContinue) return;
-    router.push('/breathing');
+    router.push("/voice");
+  };
+
+  const handleLogout = async () => {
+    const auth = getAuthSession();
+
+    try {
+      setLogoutError("");
+      setIsLoggingOut(true);
+
+      if (auth?.session.token) {
+        await logout(auth.session.token);
+      }
+
+      clearAuthSession();
+      router.replace("/login");
+    } catch (err) {
+      setLogoutError(err instanceof Error ? err.message : "Could not log out.");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -114,14 +162,39 @@ export default function MoodCheckinScreen() {
         <View style={s.header}>
           <View style={s.logoRow}>
             <Text style={s.brand}>Zindagi</Text>
-            <View style={s.streakBadge}>
-              <MaterialIcons name="local-fire-department" size={14} color={ZColors.coralDeep} />
-              <Text style={s.streakText}>7 day streak</Text>
+            <View style={s.headerActions}>
+              {/* <View style={s.streakBadge}>
+                <MaterialIcons
+                  name="local-fire-department"
+                  size={14}
+                  color={ZColors.coralDeep}
+                />
+                <Text style={s.streakText}>7 day streak</Text>
+              </View> */}
+              <TouchableOpacity
+                activeOpacity={0.75}
+                disabled={isLoggingOut}
+                onPress={handleLogout}
+                style={[s.logoutBtn, { opacity: isLoggingOut ? 0.45 : 1 }]}
+              >
+                <MaterialIcons name="logout" size={17} color={ZColors.forest} />
+              </TouchableOpacity>
             </View>
           </View>
-          <Text style={s.greeting}>Good afternoon</Text>
-          <Text style={s.dateText}>Wednesday, April 23</Text>
+          <Text style={s.greeting}>{getGreeting()}</Text>
+          <Text style={s.dateText}>{formattedDate}</Text>
         </View>
+
+        {logoutError ? (
+          <View style={s.errorBox}>
+            <MaterialIcons
+              name="error-outline"
+              size={15}
+              color={ZColors.coralDeep}
+            />
+            <Text style={s.errorText}>{logoutError}</Text>
+          </View>
+        ) : null}
 
         {/* ── Prompt ── */}
         <View style={s.promptCard}>
@@ -133,7 +206,7 @@ export default function MoodCheckinScreen() {
 
         {/* ── Mood Grid ── */}
         <View style={s.grid}>
-          {MOODS.map(mood => {
+          {MOODS.map((mood) => {
             const isSelected = selected.has(mood.id);
             return (
               <TouchableOpacity
@@ -144,7 +217,9 @@ export default function MoodCheckinScreen() {
                   s.moodBtn,
                   ZShadow.subtle,
                   {
-                    backgroundColor: isSelected ? mood.selectedBg : mood.baseColor,
+                    backgroundColor: isSelected
+                      ? mood.selectedBg
+                      : mood.baseColor,
                   },
                 ]}
               >
@@ -159,7 +234,7 @@ export default function MoodCheckinScreen() {
                 <Text
                   style={[
                     s.moodLabel,
-                    { color: isSelected ? '#FFFFFF' : mood.textColor },
+                    { color: isSelected ? "#FFFFFF" : mood.textColor },
                   ]}
                 >
                   {mood.label}
@@ -172,11 +247,15 @@ export default function MoodCheckinScreen() {
         {/* ── Intensity Hint ── */}
         {selected.size > 0 && (
           <View style={s.hintCard}>
-            <MaterialIcons name="info-outline" size={14} color={ZColors.textMuted} />
+            <MaterialIcons
+              name="info-outline"
+              size={14}
+              color={ZColors.textMuted}
+            />
             <Text style={s.hintText}>
               {selected.size === 1
                 ? `You selected 1 feeling.`
-                : `You selected ${selected.size} feelings.`}{' '}
+                : `You selected ${selected.size} feelings.`}{" "}
               Tap a feeling again to deselect it.
             </Text>
           </View>
@@ -199,7 +278,9 @@ export default function MoodCheckinScreen() {
 
         {/* ── Optional Note ── */}
         <View style={[s.card]}>
-          <Text style={s.cardTitle}>Add a note  <Text style={s.optionalTag}>(optional)</Text></Text>
+          <Text style={s.cardTitle}>
+            Add a note <Text style={s.optionalTag}>(optional)</Text>
+          </Text>
           <View style={s.noteInput}>
             <Text style={s.notePlaceholder}>
               {"What's on your mind? Write freely..."}
@@ -220,7 +301,11 @@ export default function MoodCheckinScreen() {
 
         {/* ── Crisis Link ── */}
         <TouchableOpacity style={s.crisisLink}>
-          <MaterialIcons name="phone-in-talk" size={14} color={ZColors.coralDeep} />
+          <MaterialIcons
+            name="phone-in-talk"
+            size={14}
+            color={ZColors.coralDeep}
+          />
           <Text style={s.crisisLinkText}>I need immediate support</Text>
         </TouchableOpacity>
 
@@ -236,20 +321,59 @@ const s = StyleSheet.create({
   scroll: { padding: 20, gap: 16 },
 
   header: { gap: 4, marginBottom: 4 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { fontSize: 22, fontWeight: '800', color: ZColors.forest, letterSpacing: -0.5 },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  brand: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: ZColors.forest,
+    letterSpacing: -0.5,
+  },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     backgroundColor: ZColors.coralLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: ZRadius.pill,
   },
-  streakText: { fontSize: 11, fontWeight: '700', color: ZColors.coralDeep },
-  greeting: { fontSize: 26, fontWeight: '700', color: ZColors.textPrimary, marginTop: 6 },
+  streakText: { fontSize: 11, fontWeight: "700", color: ZColors.coralDeep },
+  logoutBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: ZColors.creamCard,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: ZColors.creamDark,
+  },
+  greeting: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: ZColors.textPrimary,
+    marginTop: 6,
+  },
   dateText: { fontSize: 13, color: ZColors.textMuted },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    backgroundColor: ZColors.coralLight,
+    borderRadius: ZRadius.small,
+    padding: 10,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 12,
+    color: ZColors.coralDeep,
+    fontWeight: "700",
+  },
 
   promptCard: {
     backgroundColor: ZColors.sageLight,
@@ -259,34 +383,34 @@ const s = StyleSheet.create({
   },
   promptTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: ZColors.forest,
   },
   promptSub: { fontSize: 12, color: ZColors.textSecondary, lineHeight: 18 },
 
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   moodBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '47.5%',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "47.5%",
     paddingVertical: 18,
     paddingHorizontal: 12,
     borderRadius: ZRadius.pill,
   },
   moodLabel: {
     fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
 
   hintCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 6,
     backgroundColor: ZColors.creamCard,
     borderRadius: ZRadius.small,
@@ -300,21 +424,21 @@ const s = StyleSheet.create({
     padding: 16,
     gap: 6,
   },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: ZColors.textPrimary },
+  cardTitle: { fontSize: 14, fontWeight: "700", color: ZColors.textPrimary },
   cardSub: { fontSize: 12, color: ZColors.textMuted },
-  optionalTag: { fontSize: 12, fontWeight: '400', color: ZColors.textMuted },
+  optionalTag: { fontSize: 12, fontWeight: "400", color: ZColors.textMuted },
 
   sliderTrack: {
     height: 6,
     backgroundColor: ZColors.creamDark,
     borderRadius: ZRadius.pill,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 6,
   },
   sliderFill: {
-    width: '45%',
-    height: '100%',
+    width: "45%",
+    height: "100%",
     backgroundColor: ZColors.olive,
     borderRadius: ZRadius.pill,
   },
@@ -331,8 +455,8 @@ const s = StyleSheet.create({
     elevation: 4,
   },
   sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 4,
   },
   sliderLabel: { fontSize: 10, color: ZColors.textMuted },
@@ -347,9 +471,9 @@ const s = StyleSheet.create({
   notePlaceholder: { fontSize: 13, color: ZColors.textMuted, lineHeight: 20 },
 
   continueBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     backgroundColor: ZColors.olive,
     borderRadius: ZRadius.pill,
@@ -360,14 +484,14 @@ const s = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
-  continueBtnText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  continueBtnText: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
 
   crisisLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: 8,
   },
-  crisisLinkText: { fontSize: 13, color: ZColors.coralDeep, fontWeight: '600' },
+  crisisLinkText: { fontSize: 13, color: ZColors.coralDeep, fontWeight: "600" },
 });

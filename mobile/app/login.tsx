@@ -16,11 +16,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { ApiError, loginWithOtp, sendOtp } from '@/lib/auth-api';
+import { setAuthSession } from '@/lib/auth-session';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
+  const [registrationRequired, setRegistrationRequired] = useState(true);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
+  const [error, setError] = useState('');
   const scrollRef = useRef<ScrollView>(null);
   const otpInputRef = useRef<TextInput>(null);
 
@@ -47,15 +53,59 @@ export default function LoginScreen() {
     };
   }, [otpSent]);
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (!canSendOtp) return;
     Keyboard.dismiss();
-    setOtpSent(true);
+
+    try {
+      setError('');
+      setIsSendingOtp(true);
+      const result = await sendOtp(`+91${phoneDigits}`);
+      setRegistrationRequired(result.registrationRequired);
+      setOtpSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP.');
+    } finally {
+      setIsSendingOtp(false);
+    }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!canContinue) return;
-    router.push('./profile-details');
+
+    if (registrationRequired) {
+      router.push({
+        pathname: './profile-details',
+        params: {
+          phoneNumber: `+91${phoneDigits}`,
+          otp: otpDigits,
+        },
+      });
+      return;
+    }
+
+    try {
+      setError('');
+      setIsContinuing(true);
+      const result = await loginWithOtp(`+91${phoneDigits}`, otpDigits);
+      setAuthSession(result);
+      router.replace('/(tabs)/mood-checkin');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        router.push({
+          pathname: './profile-details',
+          params: {
+            phoneNumber: `+91${phoneDigits}`,
+            otp: otpDigits,
+          },
+        });
+        return;
+      }
+
+      setError(err instanceof Error ? err.message : 'Failed to verify OTP.');
+    } finally {
+      setIsContinuing(false);
+    }
   };
 
   return (
@@ -107,11 +157,13 @@ export default function LoginScreen() {
 
             <TouchableOpacity
               activeOpacity={0.8}
-              disabled={!canSendOtp}
+              disabled={!canSendOtp || isSendingOtp}
               onPress={handleSendOtp}
-              style={[s.primaryBtn, { opacity: canSendOtp ? 1 : 0.45 }]}
+              style={[s.primaryBtn, { opacity: canSendOtp && !isSendingOtp ? 1 : 0.45 }]}
             >
-              <Text style={s.primaryText}>{otpSent ? 'Send OTP again' : 'Send OTP'}</Text>
+              <Text style={s.primaryText}>
+                {isSendingOtp ? 'Sending...' : otpSent ? 'Send OTP again' : 'Send OTP'}
+              </Text>
               <MaterialIcons name="arrow-forward" size={18} color={ZColors.cream} />
             </TouchableOpacity>
 
@@ -138,15 +190,26 @@ export default function LoginScreen() {
 
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  disabled={!canContinue}
+                  disabled={!canContinue || isContinuing}
                   onPress={handleContinue}
-                  style={[s.primaryBtn, s.continueBtn, { opacity: canContinue ? 1 : 0.45 }]}
+                  style={[
+                    s.primaryBtn,
+                    s.continueBtn,
+                    { opacity: canContinue && !isContinuing ? 1 : 0.45 },
+                  ]}
                 >
-                  <Text style={s.primaryText}>Continue</Text>
+                  <Text style={s.primaryText}>{isContinuing ? 'Verifying...' : 'Continue'}</Text>
                   <MaterialIcons name="arrow-forward" size={18} color={ZColors.cream} />
                 </TouchableOpacity>
               </View>
             )}
+
+            {error ? (
+              <View style={s.errorBox}>
+                <MaterialIcons name="error-outline" size={15} color={ZColors.coralDeep} />
+                <Text style={s.errorText}>{error}</Text>
+              </View>
+            ) : null}
           </View>
 
           <TouchableOpacity style={s.supportLink} activeOpacity={0.75}>
@@ -249,6 +312,15 @@ const s = StyleSheet.create({
     padding: 10,
   },
   sentText: { flex: 1, fontSize: 12, color: ZColors.textSecondary, fontWeight: '600' },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: ZColors.coralLight,
+    borderRadius: ZRadius.small,
+    padding: 10,
+  },
+  errorText: { flex: 1, fontSize: 12, color: ZColors.coralDeep, fontWeight: '700' },
   otpInput: {
     color: ZColors.textPrimary,
     fontSize: 18,
