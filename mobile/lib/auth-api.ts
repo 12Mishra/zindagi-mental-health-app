@@ -71,7 +71,7 @@ export const sendOtp = (phoneNumber: string) =>
   apiRequest<{
     message: string;
     phoneNumber: string;
-    otp: string;
+    otp?: string;
     expiresInMinutes: number;
     registrationRequired: boolean;
   }>('/auth/send-otp', {

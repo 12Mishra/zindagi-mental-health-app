@@ -4,6 +4,7 @@ import { config } from '../../config';
 import { prisma } from '../../db';
 import type { RegistrationInput } from '../validators/auth.validator';
 import { createSessionToken, hashValue, safeCompare } from '../utils/crypto.util';
+import { createOtpCode } from '../utils/otp.util';
 
 const addMinutes = (date: Date, minutes: number) =>
   new Date(date.getTime() + minutes * 60 * 1000);
@@ -28,11 +29,12 @@ export const requestOtp = async (phoneNumber: string) => {
     where: { phoneNumber },
     select: { id: true },
   });
+  const otp = createOtpCode();
 
   await prisma.otpRequest.create({
     data: {
       phoneNumber,
-      otpHash: hashValue(config.otpCode),
+      otpHash: hashValue(otp),
       expiresAt: addMinutes(new Date(), config.otpTtlMinutes),
       userId: user?.id,
     },
@@ -40,7 +42,7 @@ export const requestOtp = async (phoneNumber: string) => {
 
   return {
     phoneNumber,
-    otp: config.otpCode,
+    otp,
     expiresInMinutes: config.otpTtlMinutes,
     registrationRequired: !user,
   };

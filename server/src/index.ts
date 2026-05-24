@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express, { type ErrorRequestHandler } from 'express';
 
 import { authRouter } from './auth/routes/auth.routes';
