@@ -128,7 +128,7 @@ export default function MoodCheckinScreen() {
 
   const handleContinue = () => {
     if (!canContinue) return;
-    router.push({ pathname: "/voice", params: { moods: JSON.stringify([...selected]) } });
+    router.push("/voice");
   };
 
   const handleLogout = async () => {
