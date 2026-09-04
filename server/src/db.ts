@@ -1,6 +1,8 @@
-import { PrismaNeon } from '@prisma/adapter-neon';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from './generated/prisma/client';
 
-const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL });
+import { config } from './config';
+
+const adapter = new PrismaPg(config.databaseUrl);
 
 export const prisma = new PrismaClient({ adapter });

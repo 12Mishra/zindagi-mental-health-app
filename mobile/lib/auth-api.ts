@@ -1,6 +1,9 @@
-import { AUTH_API_URL } from "./api-config";
+// const DEFAULT_API_URL = Platform.OS === 'android'
+//   ? 'http://10.0.2.2:4000'
+//   : 'http://localhost:4000';
 
-const API_URL = AUTH_API_URL;
+// const API_URL = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_URL;
+const API_URL = "http://172.16.36.95:4000";
 
 type ApiRequestOptions = {
   method?: 'GET' | 'POST';
