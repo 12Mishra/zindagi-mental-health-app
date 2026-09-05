@@ -3,7 +3,7 @@
 //   : 'http://localhost:4000';
 
 // const API_URL = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_URL;
-const API_URL = "http://172.16.36.95:4000";
+const API_URL = "http://172.16.41.13:4000";
 
 type ApiRequestOptions = {
   method?: 'GET' | 'POST';
