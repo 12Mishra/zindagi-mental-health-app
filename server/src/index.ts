@@ -23,11 +23,19 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`[REQ] ${req.method} ${req.url}`);
+  next();
+});
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
 app.use('/auth', authRouter);
+
+import { conversationRouter } from './conversation/routes/conversation.routes';
+app.use('/api', conversationRouter);
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const message = error instanceof Error ? error.message : 'Unexpected server error.';
