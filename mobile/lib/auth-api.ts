@@ -1,9 +1,8 @@
-// const DEFAULT_API_URL = Platform.OS === 'android'
-//   ? 'http://10.0.2.2:4000'
-//   : 'http://localhost:4000';
+import { Platform } from 'react-native';
 
-// const API_URL = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_URL;
-const API_URL = "http://172.16.36.95:4000";
+const API_URL = Platform.OS === 'web'
+  ? 'http://localhost:4000'
+  : (process.env.EXPO_PUBLIC_API_URL ?? 'http://172.16.39.185:4000');
 
 type ApiRequestOptions = {
   method?: 'GET' | 'POST';
