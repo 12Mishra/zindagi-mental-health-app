@@ -54,52 +54,40 @@ async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
   return data as T;
 }
 
-type AuthResponse = {
-  user: {
-    id: string;
-    phoneNumber: string;
-    fullName: string;
-  };
-  session: {
-    token: string;
-    expiresAt: string;
-  };
-};
-
-export const sendOtp = (phoneNumber: string) =>
-  apiRequest<{
-    message: string;
-    phoneNumber: string;
-    otp?: string;
-    expiresInMinutes: number;
-    registrationRequired: boolean;
-  }>('/auth/send-otp', {
+export const startConversation = (token: string, moodBefore: string[], moodNote?: string) =>
+  apiRequest<{ id: string; status: string }>('/api/conversations', {
     method: 'POST',
-    body: { phoneNumber },
+    token,
+    body: { moodBefore, moodNote },
   });
 
-export const loginWithOtp = (phoneNumber: string, otp: string) =>
-  apiRequest<AuthResponse>('/auth/login', {
+export const sendMessage = (token: string, conversationId: string, text: string) =>
+  apiRequest<{ response: string; turnNumber: number }>(`/api/conversations/${conversationId}/message`, {
     method: 'POST',
-    body: { phoneNumber, otp },
+    token,
+    body: { content: text, text },
   });
 
-export const registerWithOtp = (body: {
-  phoneNumber: string;
-  otp: string;
-  fullName: string;
-  age: number;
-  college: string;
-  sex: string;
-  history: string[];
-}) =>
-  apiRequest<AuthResponse & { wasRegistered: boolean }>('/auth/register', {
-    method: 'POST',
-    body,
-  });
-
-export const logout = (token: string) =>
-  apiRequest<void>('/auth/logout', {
+export const endConversation = (token: string, conversationId: string) =>
+  apiRequest<{ summary: string; keyThemes: string[] }>(`/api/conversations/${conversationId}/end`, {
     method: 'POST',
     token,
   });
+
+export const transcribeAudio = async (token: string, audioUri: string) => {
+  // Upload audio file as multipart form data
+  const formData = new FormData();
+  formData.append('audio', {
+    uri: audioUri,
+    type: 'audio/m4a',
+    name: 'recording.m4a',
+  } as any);
+  
+  // Use fetch directly for multipart
+  const response = await fetch(`${API_URL}/api/audio/transcribe`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  return response.json() as Promise<{ text: string }>;
+};

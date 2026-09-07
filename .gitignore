@@ -1,0 +1,13 @@
+﻿# Large model files
+*.gguf
+*.bin
+*.pt
+*.onnx
+
+# Node
+node_modules/
+dist/
+
+# OS Files
+.DS_Store
+Thumbs.db

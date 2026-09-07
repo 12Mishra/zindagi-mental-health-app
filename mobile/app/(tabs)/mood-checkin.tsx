@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -112,6 +113,7 @@ const formattedDate = new Date().toLocaleDateString("en-US", {
 
 export default function MoodCheckinScreen() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [noteText, setNoteText] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
 
@@ -128,7 +130,13 @@ export default function MoodCheckinScreen() {
 
   const handleContinue = () => {
     if (!canContinue) return;
-    router.push("/voice");
+    router.push({
+      pathname: '/voice',
+      params: {
+        moods: Array.from(selected).join(','),
+        note: noteText || '',
+      },
+    });
   };
 
   const handleLogout = async () => {
@@ -163,14 +171,6 @@ export default function MoodCheckinScreen() {
           <View style={s.logoRow}>
             <Text style={s.brand}>Zindagi</Text>
             <View style={s.headerActions}>
-              {/* <View style={s.streakBadge}>
-                <MaterialIcons
-                  name="local-fire-department"
-                  size={14}
-                  color={ZColors.coralDeep}
-                />
-                <Text style={s.streakText}>7 day streak</Text>
-              </View> */}
               <TouchableOpacity
                 activeOpacity={0.75}
                 disabled={isLoggingOut}
@@ -261,31 +261,20 @@ export default function MoodCheckinScreen() {
           </View>
         )}
 
-        {/* ── Intensity Slider placeholder ── */}
-        {/* <View style={[s.card, { gap: 10 }]}>
-          <Text style={s.cardTitle}>Overall intensity</Text>
-          <Text style={s.cardSub}>How strongly are you feeling this?</Text>
-          <View style={s.sliderTrack}>
-            <View style={s.sliderFill} />
-            <View style={s.sliderThumb} />
-          </View>
-          <View style={s.sliderLabels}>
-            <Text style={s.sliderLabel}>Mild</Text>
-            <Text style={s.sliderLabel}>Moderate</Text>
-            <Text style={s.sliderLabel}>Intense</Text>
-          </View>
-        </View> */}
-
         {/* ── Optional Note ── */}
         <View style={[s.card]}>
           <Text style={s.cardTitle}>
             Add a note <Text style={s.optionalTag}>(optional)</Text>
           </Text>
-          <View style={s.noteInput}>
-            <Text style={s.notePlaceholder}>
-              {"What's on your mind? Write freely..."}
-            </Text>
-          </View>
+          <TextInput
+            style={s.noteInput}
+            placeholder="What's on your mind? Write freely..."
+            placeholderTextColor={ZColors.textMuted}
+            multiline
+            value={noteText}
+            onChangeText={setNoteText}
+            textAlignVertical="top"
+          />
         </View>
 
         {/* ── Continue Button ── */}
