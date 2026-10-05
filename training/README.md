@@ -1,6 +1,14 @@
-# Lisa model preparation
+# Lisa model setup and preparation
 
-Live Lisa uses the configured base-model endpoint. Fine-tuning is optional and separate from serving. No Lisa weights or clinical validation are included here.
+The existing `Modelfile` from `feat/lisa-voice-pipeline` imports `lisa-mistral-7b-q4km.gguf` with temperature 0.7, top-p 0.9, and context 4096. The GGUF is distributed separately and ignored by Git; the file is not present merely because the branch was checked out. Its filename does not by itself verify the training history or clinical validity.
+
+## Use the existing Lisa GGUF locally
+
+1. Download the complete `lisa-mistral-7b-q4km.gguf` into this `training/` directory, beside `Modelfile`.
+2. From the repository root, run `ollama create lisa -f training/Modelfile`, then `ollama run lisa` for a basic local check.
+3. In `server/.env`, set `VOICE_LLM_BASE_URL=http://127.0.0.1:11434/v1/`, `VOICE_LLM_MODEL=lisa`, and `OLLAMA_MODEL=lisa`. Leave `VOICE_LLM_API_KEY=` empty for the local server. Configure the safety checker and speech providers separately.
+
+The realtime client calls Ollama's OpenAI-compatible streaming endpoint. It does not override the Modelfile's sampling temperature. Run the bilingual and safety evaluations before treating this GGUF as demo-ready. CPU-only response time may be too slow for the proposed realtime latency target.
 
 ## Prepare the supplied synthetic dialogue file
 

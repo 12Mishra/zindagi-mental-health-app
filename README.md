@@ -1,6 +1,6 @@
 # Zindagi: Lisa realtime prototype
 
-Lisa is an AI support companion for a college capstone demonstration. This repository is an engineering prototype, not validated clinical care. No fine-tuned Lisa weights or live-provider performance results are included.
+Lisa is an AI support companion for a college capstone demonstration. This repository is an engineering prototype, not validated clinical care. The existing `training/Modelfile` describes a Lisa GGUF distributed separately; its large weights are not committed to Git. No live-provider performance result is included.
 
 The Expo app supports browser and Android development-build voice sessions. The existing Node API handles opaque-token authentication, consent, conversation ownership, and short-lived voice tickets. A separate TypeScript voice process handles PCM WebSocket sessions, streaming STT/LLM/TTS, interruption and response checking. A separate worker handles durable summaries and profile evidence. Audio is not retained.
 
