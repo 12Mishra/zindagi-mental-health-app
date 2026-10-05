@@ -9,8 +9,9 @@ import { config } from './config';
 const app = express();
 
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  const origin = req.header('origin');
+  if (origin && config.voiceAllowedOrigins.includes(origin)) res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
@@ -21,10 +22,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '16kb' }));
 
 app.use((req, res, next) => {
-  console.log(`[REQ] ${req.method} ${req.url}`);
+  console.log(`[REQ] ${req.method} ${req.path}`);
   next();
 });
 
@@ -41,7 +42,7 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const message = error instanceof Error ? error.message : 'Unexpected server error.';
   const normalized = message.toLowerCase();
   const status =
-    normalized.includes('not registered')
+    normalized.includes('not registered') || normalized.includes('not found')
       ? 404
       : normalized.includes('required') ||
         normalized.includes('valid') ||
@@ -49,7 +50,7 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
       ? 400
       : 500;
 
-  res.status(status).json({ error: message });
+  res.status(status).json({ error: status === 500 ? 'Internal server error.' : message });
 };
 
 app.use(errorHandler);

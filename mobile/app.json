@@ -28,6 +28,17 @@
     "plugins": [
       "expo-router",
       [
+        "react-native-audio-api",
+        {
+          "iosBackgroundMode": false,
+          "iosMicrophonePermission": "Zindagi uses the microphone only during an active Lisa voice session.",
+          "androidPermissions": ["android.permission.RECORD_AUDIO"],
+          "androidForegroundService": false,
+          "androidFSTypes": [],
+          "disableFFmpeg": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

@@ -11,3 +11,7 @@ dist/
 # OS Files
 .DS_Store
 Thumbs.db
+training/prepared/
+__pycache__/
+*.pyc
+server/tickets*.json

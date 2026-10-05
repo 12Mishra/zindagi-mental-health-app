@@ -20,20 +20,20 @@ enum Sex {
 }
 
 model User {
-  id             String    @id @default(uuid())
-  phoneNumber    String    @unique
-  fullName       String
-  age            Int
-  college        String
-  sex            Sex
-  history        String[]  @default([])
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id          String   @id @default(uuid())
+  phoneNumber String   @unique
+  fullName    String
+  age         Int
+  college     String
+  sex         Sex
+  history     String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  otpRequests    OtpRequest[]
-  sessions       Session[]
-  conversations    Conversation[]
-  customerProfile  CustomerProfile?
+  otpRequests     OtpRequest[]
+  sessions        Session[]
+  conversations   Conversation[]
+  customerProfile CustomerProfile?
 
   @@index([phoneNumber])
 }
@@ -46,24 +46,25 @@ model OtpRequest {
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
 
-  userId      String?
-  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([phoneNumber, createdAt])
 }
 
 model Session {
-  id            String    @id @default(uuid())
-  tokenHash     String    @unique
-  userAgent     String?
-  ipAddress     String?
-  expiresAt     DateTime
-  revokedAt     DateTime?
-  createdAt     DateTime  @default(now())
-  lastSeenAt     DateTime  @default(now())
+  id         String    @id @default(uuid())
+  tokenHash  String    @unique
+  userAgent  String?
+  ipAddress  String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
 
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voiceTickets VoiceTicket[]
 
   @@index([userId])
   @@index([expiresAt])
@@ -80,48 +81,175 @@ enum MessageRole {
 }
 
 model Conversation {
-  id          String             @id @default(uuid())
-  userId      String
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status      ConversationStatus @default(ACTIVE)
-  moodBefore  String[]           @default([])
-  moodNote    String?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  endedAt     DateTime?
-  messages    Message[]
-  summary     ConversationSummary?
+  id                String               @id @default(uuid())
+  userId            String
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status            ConversationStatus   @default(ACTIVE)
+  moodBefore        String[]             @default([])
+  moodNote          String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  endedAt           DateTime?
+  transcriptConsent Boolean              @default(false)
+  retentionUntil    DateTime?
+  nextTurnNumber    Int                  @default(1)
+  messages          Message[]
+  summary           ConversationSummary?
+  summaryJob        SummaryJob?
+  voiceTickets      VoiceTicket[]
+  riskEvents        RiskEvent[]
+  responseReviews   ResponseReview[]
+  observations      ProfileObservation[]
+
   @@index([userId, createdAt])
+  @@index([retentionUntil])
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERED
+  INTERRUPTED
 }
 
 model Message {
-  id              String       @id @default(uuid())
-  conversationId  String
-  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role            MessageRole
-  content         String
-  turnNumber      Int
-  createdAt       DateTime     @default(now())
+  id               String         @id @default(uuid())
+  conversationId   String
+  conversation     Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role             MessageRole
+  content          String
+  turnNumber       Int
+  clientTurnId     String?
+  deliveryStatus   DeliveryStatus @default(DELIVERED)
+  deliveredContent String?
+  createdAt        DateTime       @default(now())
+
+  @@unique([conversationId, turnNumber])
+  @@unique([conversationId, clientTurnId, role])
   @@index([conversationId, turnNumber])
 }
 
 model ConversationSummary {
-  id              String       @id @default(uuid())
-  conversationId  String       @unique
-  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  summary         String
-  keyThemes       String[]
-  createdAt       DateTime     @default(now())
+  id             String       @id @default(uuid())
+  conversationId String       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  summary        String
+  keyThemes      String[]
+  createdAt      DateTime     @default(now())
+  structured     Json?
+  policyVersion  String?
+}
+
+enum SummaryJobState {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model SummaryJob {
+  id             String          @id @default(uuid())
+  conversationId String          @unique
+  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  state          SummaryJobState @default(PENDING)
+  attempts       Int             @default(0)
+  leaseOwner     String?
+  leaseUntil     DateTime?
+  nextAttemptAt  DateTime        @default(now())
+  lastErrorCode  String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([state, nextAttemptAt])
+  @@index([leaseUntil])
+}
+
+model VoiceTicket {
+  id             String       @id @default(uuid())
+  tokenHash      String       @unique
+  userId         String
+  sessionId      String
+  session        Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([expiresAt])
+}
+
+enum RiskLevel {
+  UNKNOWN
+  LOW
+  ELEVATED
+  URGENT
+}
+
+model RiskEvent {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  turnId         String
+  level          RiskLevel
+  evidence       String?
+  action         String
+  policyVersion  String
+  createdAt      DateTime     @default(now())
+
+  @@unique([conversationId, turnId, policyVersion])
+}
+
+enum ReviewDecision {
+  ALLOW
+  BLOCK
+  REVISE
+  UNKNOWN
+}
+
+model ResponseReview {
+  id             String         @id @default(uuid())
+  conversationId String
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  generationId   String
+  segmentIndex   Int
+  decision       ReviewDecision
+  reasonCode     String
+  policyVersion  String
+  createdAt      DateTime       @default(now())
+
+  @@unique([conversationId, generationId, segmentIndex])
+}
+
+enum Kosha {
+  ANNAMAYA
+  PRANAMAYA
+  MANOMAYA
+  VIJNANAMAYA
+  ANANDAMAYA
+}
+
+model ProfileObservation {
+  id             String       @id @default(uuid())
+  userId         String
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  kosha          Kosha
+  observation    String
+  evidenceTurnId String
+  policyVersion  String
+  supersededAt   DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([userId, kosha, createdAt])
 }
 
 model CustomerProfile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  keywords    String[] @default([])
-  themes      String[] @default([])
-  riskFlags   String[] @default([])
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keywords  String[] @default([])
+  themes    String[] @default([])
+  riskFlags String[] @default([])
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
-
