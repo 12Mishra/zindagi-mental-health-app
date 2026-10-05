@@ -76,7 +76,8 @@ export async function* streamLisa(messages: LlmMessage[], signal: AbortSignal): 
   const response = await fetch(url, {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/json', ...(config.voiceLlmApiKey ? { Authorization: `Bearer ${config.voiceLlmApiKey}` } : {}) },
-    body: JSON.stringify({ model: config.voiceLlmModel, messages, stream: true, temperature: 0.5, max_tokens: 200 }),
+    // Let the served model's own sampling settings apply (Lisa's Modelfile specifies temperature/top_p).
+    body: JSON.stringify({ model: config.voiceLlmModel, messages, stream: true, max_tokens: 200 }),
   });
   if (!response.ok || !response.body) throw new Error(`llm_http_${response.status}`);
   const reader = response.body.getReader();

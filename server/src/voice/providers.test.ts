@@ -8,6 +8,8 @@ process.env.DEEPGRAM_API_KEY = 'test-only';
 process.env.SARVAM_API_KEY = 'test-only';
 process.env.VOICE_SAFETY_BASE_URL = 'http://127.0.0.1:9/v1/';
 process.env.VOICE_SAFETY_MODEL = 'test-only';
+process.env.VOICE_LLM_BASE_URL = 'http://127.0.0.1:9/v1/';
+process.env.VOICE_LLM_MODEL = 'lisa';
 
 test('Deepgram adapter streams frames and emits partial/final before close', async () => {
   const { DeepgramStream } = await import('./providers');
@@ -69,5 +71,25 @@ test('Sarvam adapter streams aligned PCM and rejects mislabeled WAV', async () =
       { status: 200, headers: { 'content-type': 'audio/wav' } });
     await assert.rejects(streamSarvamPcm('Hello', new AbortController().signal, () => {}),
       /tts_unexpected_codec/);
+  } finally { globalThis.fetch = original; }
+});
+
+test('Lisa stream uses the served model sampling settings', async () => {
+  const { streamLisa } = await import('./providers');
+  const original = globalThis.fetch;
+  let sent: Record<string, unknown> | null = null;
+  try {
+    globalThis.fetch = async (_input, init) => {
+      sent = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: [DONE]\n\n',
+        { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    };
+    const tokens: string[] = [];
+    for await (const token of streamLisa([{ role: 'user', content: 'Hi' }], new AbortController().signal)) tokens.push(token);
+    assert.deepEqual(tokens, ['Hello']);
+    const requestBody = sent as Record<string, unknown> | null;
+    assert.ok(requestBody);
+    assert.equal(requestBody['model'], 'lisa');
+    assert.equal(Object.prototype.hasOwnProperty.call(requestBody, 'temperature'), false);
   } finally { globalThis.fetch = original; }
 });
