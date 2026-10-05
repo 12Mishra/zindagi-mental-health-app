@@ -1,11 +1,7 @@
-import { Platform } from 'react-native';
-
-const API_URL = Platform.OS === 'web'
-  ? 'http://localhost:4000'
-  : (process.env.EXPO_PUBLIC_API_URL ?? 'http://172.16.39.185:4000');
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type ApiRequestOptions = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'DELETE';
   body?: Record<string, unknown>;
   token?: string;
 };
@@ -20,6 +16,7 @@ export class ApiError extends Error {
 }
 
 async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
+  if (!API_URL) throw new ApiError('EXPO_PUBLIC_API_URL is not configured.', 0);
   let response: Response;
 
   try {
@@ -54,11 +51,11 @@ async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
   return data as T;
 }
 
-export const startConversation = (token: string, moodBefore: string[], moodNote?: string) =>
+export const startConversation = (token: string, moodBefore: string[], moodNote?: string, transcriptConsent = false) =>
   apiRequest<{ id: string; status: string }>('/api/conversations', {
     method: 'POST',
     token,
-    body: { moodBefore, moodNote },
+    body: { moodBefore, moodNote, transcriptConsent },
   });
 
 export const sendMessage = (token: string, conversationId: string, text: string) =>
@@ -69,25 +66,26 @@ export const sendMessage = (token: string, conversationId: string, text: string)
   });
 
 export const endConversation = (token: string, conversationId: string) =>
-  apiRequest<{ summary: string; keyThemes: string[] }>(`/api/conversations/${conversationId}/end`, {
+  apiRequest<{ summaryStatus: string }>(`/api/conversations/${conversationId}/end`, {
     method: 'POST',
     token,
   });
 
-export const transcribeAudio = async (token: string, audioUri: string) => {
-  // Upload audio file as multipart form data
-  const formData = new FormData();
-  formData.append('audio', {
-    uri: audioUri,
-    type: 'audio/m4a',
-    name: 'recording.m4a',
-  } as any);
-  
-  // Use fetch directly for multipart
-  const response = await fetch(`${API_URL}/api/audio/transcribe`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
+export const issueVoiceTicket = (token: string, conversationId: string) =>
+  apiRequest<{ ticket: string; expiresAt: string }>(`/api/conversations/${conversationId}/voice-ticket`, {
+    method: 'POST', token,
   });
-  return response.json() as Promise<{ text: string }>;
+
+export const deleteConversation = (token: string, conversationId: string) =>
+  apiRequest<void>(`/api/conversations/${conversationId}`, { method: 'DELETE', token });
+
+export type SavedConversation = {
+  id: string;
+  createdAt: string;
+  endedAt: string | null;
+  summary: { summary: string; keyThemes: string[] } | null;
+  summaryJob: { state: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' } | null;
 };
+
+export const getSavedConversations = (token: string) =>
+  apiRequest<SavedConversation[]>('/api/users/me/conversations?limit=20', { token });
