@@ -52,6 +52,7 @@ export default function VoiceScreen() {
     const token = getAuthSession()?.session.token;
     if (!token) { router.push('/login'); return; }
     setState('connecting'); setNotice('Requesting microphone access and connecting...');
+    setSummaryStatus('');
     try {
       const created = await startConversation(token, params.moods?.split(',') ?? [], params.note, consent);
       conversationId.current = created.id;
@@ -62,6 +63,7 @@ export default function VoiceScreen() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not start voice session.');
       if (conversationId.current) await endConversation(token, conversationId.current).catch(() => {});
+      conversationId.current = null;
       client.current?.end(); client.current = null;
       setState('idle');
     }

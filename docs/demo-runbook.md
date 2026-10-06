@@ -40,6 +40,10 @@ npm ci
 npm run web
 ```
 
+Restart Expo after changing `mobile/.env`; the browser bundle embeds these URLs. Start `npm run voice` before beginning a hands-free session. If the voice server or a required provider is unavailable, the browser stays on the start screen and shows the startup error.
+
+For a local Lisa test with an explicitly approved Gemini safety checker, set `VOICE_LLM_BASE_URL=http://127.0.0.1:11434/v1/` and `VOICE_LLM_MODEL=lisa`, then set `VOICE_SAFETY_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/`, `VOICE_SAFETY_MODEL=gemini-3.1-flash-lite`, and `VOICE_SAFETY_API_KEY` to the approved Gemini key. `VOICE_SAFETY_TIMEOUT_MS` can be raised for slow development connections; the default is 1800 ms and checks still block on timeout. The local test connection took over 10 seconds per safety call, so this setup does not meet a realtime latency target. Keep `DEEPGRAM_API_KEY` and `SARVAM_API_KEY` configured for live audio.
+
 For Android, use the development PC's reachable LAN IP in both mobile URLs and rebuild after adding the native audio library:
 
 ```powershell

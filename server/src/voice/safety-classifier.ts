@@ -6,7 +6,7 @@ async function classify(system: string, input: string, signal?: AbortSignal): Pr
   const url = new URL('chat/completions', config.voiceSafetyBaseUrl.endsWith('/')
     ? config.voiceSafetyBaseUrl : `${config.voiceSafetyBaseUrl}/`);
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 1800);
+  const timer = setTimeout(() => controller.abort(), config.voiceSafetyTimeoutMs);
   signal?.addEventListener('abort', () => controller.abort(), { once: true });
   try {
     const response = await fetch(url, {
