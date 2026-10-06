@@ -14,7 +14,7 @@ type Line = { id: string; role: 'user' | 'assistant' | 'system'; text: string };
 export default function VoiceScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ moods?: string; note?: string }>();
-  const [state, setState] = useState<'idle' | 'connecting' | 'listening' | 'speaking' | 'responding' | 'ending' | 'ended'>('idle');
+  const [state, setState] = useState<'idle' | 'connecting' | 'listening' | 'speaking' | 'checking' | 'responding' | 'ending' | 'ended'>('idle');
   const [consent, setConsent] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [partial, setPartial] = useState('');
@@ -35,15 +35,30 @@ export default function VoiceScreen() {
     switch (event.type) {
       case 'ready': setState('listening'); setNotice('Microphone is live. Speak naturally.'); break;
       case 'speech_start': setState('speaking'); setPartial(''); break;
-      case 'speech_end': setState('responding'); break;
+      case 'speech_end': setState('checking'); setNotice('Checking your message. Please pause while Lisa prepares a reply.'); break;
       case 'transcript_partial': setPartial(event.text ?? ''); break;
       case 'transcript_final': setPartial(''); if (event.text) addLine('user', event.text); break;
-      case 'response_text': if (event.text) addLine('assistant', event.text); setState('responding'); break;
-      case 'audio_start': setState('responding'); break;
-      case 'audio_end': setState('listening'); break;
+      case 'processing':
+        if (event.stage === 'student_safety') { setState('checking'); setNotice('Checking your message. Please wait.'); }
+        else if (event.stage === 'lisa_generation') { setState('responding'); setNotice('Lisa is composing a reply. Please pause so a new message does not cancel it.'); }
+        else if (event.stage === 'response_review') setNotice('Checking Lisa’s reply before playback.');
+        else if (event.stage === 'speech_synthesis') setNotice('Preparing Lisa’s speech.');
+        break;
+      case 'response_text': if (event.text) addLine('assistant', event.text);
+        setState(event.serviceMessage ? 'listening' : 'responding'); setNotice(''); break;
+      case 'audio_start': setState('responding'); setNotice('Lisa is speaking.'); break;
+      case 'audio_end': setState('listening'); setNotice(''); break;
       case 'interrupted': setState('speaking'); setNotice('Lisa stopped speaking so you can continue.'); break;
-      case 'risk': if (event.level === 'URGENT' || event.level === 'UNKNOWN') setNotice('Lisa is checking your safety before continuing.'); break;
-      case 'error': setNotice(`Voice error: ${event.code ?? 'unknown'}`); break;
+      case 'risk':
+        if (!event.provisional) setState('responding');
+        if (event.level === 'URGENT' || event.level === 'UNKNOWN' || event.level === 'ELEVATED')
+          setNotice('Lisa is checking your safety before continuing.');
+        else setNotice('Lisa is preparing a reply. On this computer, this may take 15–60 seconds. Please pause so it is not interrupted.');
+        break;
+      case 'error': setNotice(`Voice error: ${event.code ?? 'unknown'}`);
+        if (event.code === 'generation_failed' || event.code === 'response_blocked' || event.code === 'turn_internal_error')
+          setState('listening');
+        break;
       case 'session_end': setState('ended'); setSummaryStatus(event.summaryStatus ?? 'none'); client.current = null; break;
     }
   };
@@ -148,6 +163,7 @@ export default function VoiceScreen() {
           <MaterialIcons name={state === 'speaking' ? 'graphic-eq' : 'mic'} size={44} color={muted ? '#777' : ZColors.sage} />
           <Text style={styles.status}>{state === 'connecting' ? 'Connecting...' :
             state === 'speaking' ? 'Listening to you...' : state === 'responding' ? 'Lisa is responding...' :
+            state === 'checking' ? 'Checking your message...' :
             state === 'ending' ? 'Ending...' : muted ? 'Microphone muted' : 'Listening'}</Text>
           {!!notice && <Text style={styles.notice}>{notice}</Text>}
           <View style={styles.buttons}>

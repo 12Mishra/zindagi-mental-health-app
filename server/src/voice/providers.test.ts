@@ -58,6 +58,21 @@ test('unchecked Lisa segment fails closed when checker is unavailable', async ()
   assert.equal(triage.level, 'UNKNOWN');
 });
 
+test('student safety accepts consistent ordinary stress and rejects inconsistent routing', async () => {
+  const { assessStudentUtterance } = await import('./safety-classifier');
+  const original = globalThis.fetch;
+  const reply = (level: string, action: string) => new Response(JSON.stringify({
+    choices: [{ message: { content: JSON.stringify({ level, action, evidence: '', emotion: 'stressed' }) } }],
+  }), { status: 200, headers: { 'content-type': 'application/json' } });
+  try {
+    globalThis.fetch = async () => reply('LOW', 'continue');
+    assert.equal((await assessStudentUtterance('I feel stressed about placements')).level, 'LOW');
+    globalThis.fetch = async () => reply('ELEVATED', 'continue');
+    assert.deepEqual(await assessStudentUtterance('I feel stressed about placements'),
+      { level: 'UNKNOWN', action: 'clarify_safety', evidence: undefined });
+  } finally { globalThis.fetch = original; }
+});
+
 test('Sarvam adapter streams aligned PCM and rejects mislabeled WAV', async () => {
   const { streamSarvamPcm } = await import('./providers');
   const original = globalThis.fetch;

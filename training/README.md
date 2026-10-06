@@ -5,7 +5,7 @@ The existing `Modelfile` from `feat/lisa-voice-pipeline` imports `lisa-mistral-7
 ## Use the existing Lisa GGUF locally
 
 1. Download the complete `lisa-mistral-7b-q4km.gguf` into this `training/` directory, beside `Modelfile`.
-2. From the repository root, run `ollama create lisa -f training/Modelfile`, then `ollama run lisa` for a basic local check.
+2. From the repository root, run `ollama create lisa -f training/Modelfile`, then `ollama run lisa` for a basic local check. Recreate the model after a Modelfile update. The template now passes Mistral's instruction delimiters and chat roles to the GGUF; older local `lisa` builds with `TEMPLATE {{ .Prompt }}` may continue as the student instead of replying as Lisa.
 3. In `server/.env`, set `VOICE_LLM_BASE_URL=http://127.0.0.1:11434/v1/`, `VOICE_LLM_MODEL=lisa`, and `OLLAMA_MODEL=lisa`. Leave `VOICE_LLM_API_KEY=` empty for the local server. Configure the safety checker and speech providers separately.
 
 The realtime client calls Ollama's OpenAI-compatible streaming endpoint. It does not override the Modelfile's sampling temperature. Run the bilingual and safety evaluations before treating this GGUF as demo-ready. CPU-only response time may be too slow for the proposed realtime latency target.

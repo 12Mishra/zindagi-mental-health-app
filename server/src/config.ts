@@ -43,6 +43,7 @@ export const config = {
   voiceSafetyApiKey: process.env.VOICE_SAFETY_API_KEY ?? process.env.VOICE_LLM_API_KEY ?? '',
   voiceSafetyModel: process.env.VOICE_SAFETY_MODEL ?? '',
   voiceSafetyTimeoutMs: positiveInteger('VOICE_SAFETY_TIMEOUT_MS', 1800),
+  voiceSafetyReasoningEffort: process.env.VOICE_SAFETY_REASONING_EFFORT ?? '',
   summaryConcurrency: positiveInteger('SUMMARY_CONCURRENCY', 1),
   summaryPollMs: positiveInteger('SUMMARY_POLL_MS', 2000),
   summaryLlmBaseUrl: process.env.SUMMARY_LLM_BASE_URL ?? '',
