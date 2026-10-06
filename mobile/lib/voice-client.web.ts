@@ -28,6 +28,14 @@ class PcmCapture extends AudioWorkletProcessor {
 registerProcessor('zindagi-pcm-capture', PcmCapture);
 `;
 
+const startupMessage = (code?: string) => {
+  if (code === 'provider_not_configured') return 'Voice service is missing a provider or safety checker. Check server/.env and restart the voice service.';
+  if (code === 'origin_not_allowed') return 'This browser origin is not allowed by the voice service. Check VOICE_ALLOWED_ORIGINS.';
+  if (code === 'invalid_ticket') return 'Voice access expired. Please try starting the session again.';
+  return code ? `Voice could not start (${code}). Check the voice service terminal.` :
+    'Cannot connect to the voice service. Start npm run voice in the server folder and check its terminal.';
+};
+
 export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   let socket: WebSocket | null = null;
   let captureContext: AudioContext | null = null;
@@ -92,52 +100,76 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
 
   return {
     async start(ticket: string) {
+      const base = process.env.EXPO_PUBLIC_VOICE_WS_URL;
+      if (!base) throw new Error('Voice URL is missing. Set EXPO_PUBLIC_VOICE_WS_URL in mobile/.env and restart Expo.');
       if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) throw new Error('This browser does not support realtime microphone capture.');
       stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
       });
-      const base = process.env.EXPO_PUBLIC_VOICE_WS_URL;
-      if (!base) { cleanup(); throw new Error('EXPO_PUBLIC_VOICE_WS_URL is not configured.'); }
-      socket = new WebSocket(base);
-      socket.binaryType = 'arraybuffer';
-      socket.onopen = () => send({ type: 'hello', ticket,
-        format: { encoding: 'pcm_s16le', sampleRate: 16000, channels: 1, frameMs: 20 } });
-      socket.onmessage = event => {
-        if (event.data instanceof ArrayBuffer) {
-          if (queuedEnvelope) play(event.data, queuedEnvelope);
-          queuedEnvelope = null; return;
-        }
-        let value: VoiceEvent;
-        try { value = JSON.parse(String(event.data)); } catch { return; }
-        if (value.type === 'audio_chunk') { queuedEnvelope = value; return; }
-        if (value.type === 'ready') void beginCapture().catch(error => options.onError(String(error)));
-        if (value.type === 'audio_start' && value.generationId && value.generationId !== currentGeneration) {
-          stopPlayback(); currentGeneration = value.generationId;
-        }
-        if (value.type === 'interrupted' || value.type === 'session_end') stopPlayback();
-        if (value.type === 'audio_end' && typeof value.segmentIndex === 'number') {
-          const source = lastSource.get(value.segmentIndex);
-          const acknowledge = () => {
-            if (currentGeneration === value.generationId && !ended) send({ type: 'playback_progress',
-              generationId: value.generationId, segmentIndex: value.segmentIndex });
-          };
-          if (source && playing.has(source)) source.addEventListener('ended', acknowledge, { once: true });
-          else if (source) acknowledge();
-        }
-        options.onEvent(value);
-        if (value.type === 'session_end') { ended = true; cleanup(); socket?.close(); }
-      };
-      socket.onerror = () => options.onError('Voice connection failed.');
-      socket.onclose = () => {
-        if (!ended) {
-          ended = true;
-          options.onError('Voice connection closed.');
-          options.onEvent({ type: 'session_end', summaryStatus: 'error' });
-        }
-        cleanup();
-      };
+      await new Promise<void>((resolve, reject) => {
+        let ready = false;
+        let settled = false;
+        const timer = setTimeout(() => failStart('Voice service did not become ready. Check its terminal.'), 12_000);
+        const failStart = (message: string) => {
+          if (settled) return;
+          settled = true; ended = true; clearTimeout(timer);
+          cleanup(); socket?.close(); reject(new Error(message));
+        };
+        try { socket = new WebSocket(base); }
+        catch { failStart(startupMessage()); return; }
+        socket.binaryType = 'arraybuffer';
+        socket.onopen = () => send({ type: 'hello', ticket,
+          format: { encoding: 'pcm_s16le', sampleRate: 16000, channels: 1, frameMs: 20 } });
+        socket.onmessage = event => {
+          if (event.data instanceof ArrayBuffer) {
+            if (queuedEnvelope) play(event.data, queuedEnvelope);
+            queuedEnvelope = null; return;
+          }
+          let value: VoiceEvent;
+          try { value = JSON.parse(String(event.data)); } catch { return; }
+          if (!ready && value.type === 'error') { failStart(startupMessage(value.code)); return; }
+          if (!ready && value.type === 'session_end') { failStart(startupMessage('session_ended_early')); return; }
+          if (value.type === 'audio_chunk') { queuedEnvelope = value; return; }
+          if (value.type === 'ready') {
+            void beginCapture().then(() => {
+              if (settled) return;
+              ready = true; settled = true; clearTimeout(timer);
+              options.onEvent(value); resolve();
+            }).catch(error => failStart(error instanceof Error ? error.message : String(error)));
+            return;
+          }
+          if (value.type === 'audio_start' && value.generationId && value.generationId !== currentGeneration) {
+            stopPlayback(); currentGeneration = value.generationId;
+          }
+          if (value.type === 'interrupted' || value.type === 'session_end') stopPlayback();
+          if (value.type === 'audio_end' && typeof value.segmentIndex === 'number') {
+            const source = lastSource.get(value.segmentIndex);
+            const acknowledge = () => {
+              if (currentGeneration === value.generationId && !ended) send({ type: 'playback_progress',
+                generationId: value.generationId, segmentIndex: value.segmentIndex });
+            };
+            if (source && playing.has(source)) source.addEventListener('ended', acknowledge, { once: true });
+            else if (source) acknowledge();
+          }
+          options.onEvent(value);
+          if (value.type === 'session_end') { ended = true; cleanup(); socket?.close(); }
+        };
+        socket.onerror = () => {
+          if (!ready) failStart(startupMessage());
+          else options.onError('Voice connection failed.');
+        };
+        socket.onclose = event => {
+          if (!ready) failStart(startupMessage(event.reason || undefined));
+          else if (!ended) {
+            ended = true;
+            options.onError('Voice connection closed.');
+            options.onEvent({ type: 'session_end', summaryStatus: 'error' });
+          }
+          cleanup();
+        };
+      });
     },
-    end() { send({ type: 'end' }); cleanup(); setTimeout(() => socket?.close(), 10_000); },
+    end() { if (ended) return; send({ type: 'end' }); cleanup(); setTimeout(() => socket?.close(), 10_000); },
     mute(value: boolean) { send({ type: value ? 'mute' : 'unmute' }); },
   };
 }
