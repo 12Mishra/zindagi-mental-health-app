@@ -219,6 +219,7 @@ class VoiceSession {
     const metrics: TurnMetrics = { speechEndAt, firstTokenAt: null, firstAudioAt: null,
       inputTokensEstimate: 0, llmChars: 0, ttsChars: 0, audioBytes: 0 };
     try {
+      this.event('processing', { turnId, generationId: responseId, stage: 'student_safety' });
       const [triage, committedTurn] = await Promise.all([
         assessStudentUtterance(text, signal,
           history.filter(message => message.role === 'user').slice(-3, -1).map(message => message.content)),
@@ -236,6 +237,7 @@ class VoiceSession {
         generated = triage.level === 'URGENT' ? URGENT_SUPPORT : SAFETY_CLARIFICATION;
         await this.speak(generated, 0, output, generation, signal, triage, true, metrics, text);
       } else {
+        this.event('processing', { turnId, generationId: responseId, stage: 'lisa_generation' });
         metrics.inputTokensEstimate = Math.ceil((this.systemPrompt.length +
           history.reduce((n, m) => n + m.content.length, 0)) / 4);
         let pending = '';
@@ -265,7 +267,16 @@ class VoiceSession {
       if (!signal.aborted) {
         blocked = error instanceof Error && error.message === 'response_blocked';
         this.fail(blocked ? 'response_blocked' : 'generation_failed', true);
-        if (blocked && generation === this.generation) this.event('response_text', { text: RESPONSE_UNAVAILABLE, segmentIndex: output.segments.length, serviceMessage: true });
+        if (generation === this.generation && output.segments.length === 0) {
+          try {
+            await this.speak(RESPONSE_UNAVAILABLE, output.segments.length, output, generation,
+              signal, { level: 'LOW', action: 'continue' }, true, metrics, text);
+          } catch {
+            if (!output.segments.includes(RESPONSE_UNAVAILABLE)) this.event('response_text', {
+              text: RESPONSE_UNAVAILABLE, segmentIndex: output.segments.length, serviceMessage: true,
+            });
+          }
+        }
       }
     } finally {
       this.event('turn_metrics', {
@@ -311,7 +322,8 @@ class VoiceSession {
   private async speak(text: string, segmentIndex: number, output: TurnOutput, generation: number,
     signal: AbortSignal, triage: Triage, policyResponse: boolean, metrics: TurnMetrics, studentUtterance: string) {
     if (!this.auth || signal.aborted || generation !== this.generation) return;
-    const allowedPolicyText = text === URGENT_SUPPORT || text === SAFETY_CLARIFICATION;
+    const allowedPolicyText = text === URGENT_SUPPORT || text === SAFETY_CLARIFICATION || text === RESPONSE_UNAVAILABLE;
+    if (!policyResponse) this.event('processing', { generationId: output.id, stage: 'response_review' });
     const review = policyResponse && allowedPolicyText
       ? { decision: 'ALLOW' as const, reasonCode: 'fixed_safety_response' }
       : await checkLisaSegment(text, triage, signal, studentUtterance);
@@ -322,7 +334,8 @@ class VoiceSession {
     if (review.decision !== 'ALLOW') throw new Error('response_blocked');
     if (signal.aborted || generation !== this.generation) return;
     output.segments.push(text);
-    this.event('response_text', { text, segmentIndex });
+    this.event('response_text', { text, segmentIndex, serviceMessage: text === RESPONSE_UNAVAILABLE });
+    this.event('processing', { generationId: output.id, stage: 'speech_synthesis' });
     let chunkIndex = 0;
     await streamSarvamPcm(text, signal, chunk => {
       if (signal.aborted || generation !== this.generation || this.socket.readyState !== WebSocket.OPEN) return;

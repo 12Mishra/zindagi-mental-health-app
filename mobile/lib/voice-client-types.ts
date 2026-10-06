@@ -3,6 +3,8 @@ export type VoiceEvent = {
   text?: string;
   code?: string;
   level?: string;
+  provisional?: boolean;
+  stage?: string;
   summaryStatus?: string;
   generationId?: string;
   segmentIndex?: number;
