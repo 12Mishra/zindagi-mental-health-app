@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { performance } from 'node:perf_hooks';
 import WebSocket, { WebSocketServer } from 'ws';
 import { config } from '../config';
 import { prisma } from '../db';
@@ -7,28 +6,43 @@ import { buildConversationContext } from '../conversation/services/context.servi
 import { endConversation } from '../conversation/services/conversation.service';
 import { consumeVoiceTicket } from './tickets';
 import { AcousticAnalyzer } from './acoustic';
-import { DeepgramStream, streamLisa, streamSarvamPcm, type LlmMessage } from './providers';
+import { DeepgramStream, streamLisa, warmLisa, type LlmMessage } from './providers';
 import { assessStudentUtterance, checkLisaSegment } from './safety-classifier';
-import {
-  POLICY_VERSION, RESPONSE_UNAVAILABLE, SAFETY_CLARIFICATION, URGENT_SUPPORT,
-  triageStableUtterance, type Triage,
-} from './policy';
+import { POLICY_VERSION, triageStableUtterance, turnLanguage, type Review, type Triage } from './policy';
+import { TurnTrace } from './trace';
+import { createTtsSession, type TtsSession } from './tts-session';
+import { BargeInDetector } from './turn-taking';
+import { TurnRunner } from './turn';
 
 type Auth = { userId: string; conversationId: string; sessionId: string; transcriptConsent: boolean };
 type ClientEvent = { type?: string; generationId?: string; segmentIndex?: number; ticket?: string; format?: unknown; v?: number };
 type State = 'connecting' | 'listening' | 'user_speaking' | 'endpointing' | 'generating' | 'playing' | 'interrupted' | 'ending' | 'closed';
-type TurnMetrics = { speechEndAt: number; firstTokenAt: number | null; firstAudioAt: number | null;
-  inputTokensEstimate: number; llmChars: number; ttsChars: number; audioBytes: number };
 type TurnOutput = { id: string; segments: string[]; delivered: Set<number>; messageId: string | null };
 
 const active = new Set<VoiceSession>();
 let admitting = 0;
+
+/** Bounds concurrent async output audits per session. */
+class Limiter {
+  private active = 0;
+  private readonly waiting: Array<() => void> = [];
+  constructor(private readonly max: number) {}
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    while (this.active >= this.max) await new Promise<void>(resolve => this.waiting.push(resolve));
+    this.active++;
+    try { return await task(); } finally { this.active--; this.waiting.shift()?.(); }
+  }
+}
+
 const wss = new WebSocketServer({ port: config.voicePort, path: '/voice', maxPayload: 8192 });
 
 class VoiceSession {
   readonly id = randomUUID();
   private auth: Auth | null = null;
   private stt: DeepgramStream | null = null;
+  private tts: TtsSession | null = null;
+  private readonly bargeIn = new BargeInDetector(config.bargeInMinWords);
+  private readonly reviews = new Limiter(2);
   private acoustic: AcousticAnalyzer | null = null;
   private handshaking = false;
   private lastPartialCheck = 0;
@@ -99,7 +113,7 @@ class VoiceSession {
     if (!this.auth) return;
     if (data.type === 'mute') this.muted = true;
     else if (data.type === 'unmute') this.muted = false;
-    else if (data.type === 'interrupt') this.interrupt();
+    else if (data.type === 'interrupt') this.cancelGeneration();
     else if (data.type === 'playback_progress') await this.playbackProgress(data);
     else if (data.type === 'end') await this.end();
     else this.fail('unknown_control', true);
@@ -111,7 +125,8 @@ class VoiceSession {
     try {
       const auth = await consumeVoiceTicket(ticket);
       if (!auth) { this.fail('invalid_ticket', false); return; }
-      if (!config.deepgramApiKey || !config.sarvamApiKey || !config.voiceLlmBaseUrl || !config.voiceLlmModel || !config.voiceSafetyModel) {
+      if (!config.deepgramApiKey || !config.sarvamApiKey || !config.voiceLlmBaseUrl || !config.voiceLlmModel ||
+          !config.voiceSafetyBaseUrl || !config.voiceSafetyModel) {
         this.fail('provider_not_configured', false); return;
       }
       this.auth = auth;
@@ -125,57 +140,68 @@ class VoiceSession {
         final: text => this.onFinal(text),
         error: code => { if (this.state !== 'ending' && this.state !== 'closed') this.fail(code, false); },
       });
-      await this.stt.connect();
+      this.tts = createTtsSession();
+      // TTS socket opens in parallel with STT; a failure here is retried lazily on the first clause.
+      const ttsOpen = this.tts.open().catch(() => console.warn(`[voice] ${this.id} tts_open_failed`));
+      await Promise.all([this.stt.connect(), ttsOpen]);
       this.acoustic = new AcousticAnalyzer(value => this.event('acoustic', value));
       active.add(this);
       this.state = 'listening';
       this.startedAt = Date.now();
       this.event('ready', { format: { encoding: 'pcm_s16le', sampleRate: 16000, channels: 1 },
         playback: { encoding: 'pcm_s16le', sampleRate: 24000, channels: 1 }, model: config.voiceLlmModel });
+      if (config.voiceLlmWarmup) void warmLisa();
     } catch { this.fail('voice_start_failed', false); }
     finally { admitting--; }
   }
 
+  private get speaking() { return this.state === 'generating' || this.state === 'playing'; }
+
   private onPartial(text: string) {
     this.event('transcript_partial', { text });
+    if (this.speaking && this.bargeIn.partial(text)) this.cancelGeneration();
     if (Date.now() - this.lastPartialCheck < 250) return;
     this.lastPartialCheck = Date.now();
     const provisional = triageStableUtterance(text);
     if (provisional.level === 'URGENT') {
-      if (this.state === 'generating' || this.state === 'playing') this.interrupt();
+      if (this.speaking) this.cancelGeneration();
       this.event('risk', { level: 'URGENT', provisional: true, action: provisional.action, policyVersion: POLICY_VERSION });
     }
   }
 
+  /** VAD only: reported to the client, but never interrupts Lisa (it fires on echo and noise). */
   private onSpeechStart() {
     if (this.state === 'ending' || this.state === 'closed') return;
-    if (this.state === 'generating' || this.state === 'playing') this.interrupt();
-    this.state = 'user_speaking';
+    if (!this.speaking) this.state = 'user_speaking';
     this.event('speech_start');
   }
 
   private onFinal(text: string) {
     if (!this.auth || this.state === 'ending' || this.state === 'closed') return;
-    if (this.state === 'generating' || this.state === 'playing') this.interrupt();
+    const trace = new TurnTrace('');
+    this.cancelGeneration();
     this.state = 'endpointing';
     const turnId = `${this.id}-${++this.turn}`;
     this.lastTurnId = turnId;
     this.event('speech_end');
     this.event('transcript_final', { text });
-    this.interrupt(false);
+    const regex = triageStableUtterance(text);
+    trace.mark('triageRegexDone');
     this.state = 'generating';
     const generation = ++this.generation;
     this.generationId = randomUUID();
     this.abort = new AbortController();
+    this.bargeIn.arm();
     const output: TurnOutput = { id: this.generationId, segments: [], delivered: new Set(), messageId: null };
     this.output = output;
     this.history.push({ role: 'user', content: text });
     this.history = this.history.slice(-20);
     const history = [...this.history];
+    // Persisting the user row runs in parallel; it is only awaited before writing the assistant row.
     const commit = this.commitTail.then(() => this.persistUser(text, turnId));
     this.commitTail = commit.then(() => {}, () => {});
-    const task = this.respond(text, turnId, generation, output, history, commit,
-      this.abort.signal, performance.now()).catch(() => {
+    const task = this.respond({ text, turnId, generation, output, history, commit, regex,
+      signal: this.abort.signal, trace: trace.withTurnId(turnId) }).catch(() => {
       this.fail('turn_internal_error', true);
     }).finally(() => {
       if (this.generation === generation && this.state !== 'ending' && this.state !== 'closed') this.state = 'listening';
@@ -184,13 +210,16 @@ class VoiceSession {
     this.pendingTasks.add(task);
   }
 
-  private interrupt(announce = true) {
+  /** The single cancellation path (barge-in, client interrupt, new turn): abort LLM/triage/TTS and drop late events. */
+  private cancelGeneration() {
     this.abort?.abort();
     this.abort = null;
     this.generation++;
-    if (this.state === 'generating' || this.state === 'playing') {
+    this.bargeIn.disarm();
+    if (this.speaking) {
+      this.tts?.cancel();
       this.state = 'interrupted';
-      if (announce) this.event('interrupted');
+      this.event('interrupted');
     }
   }
 
@@ -208,150 +237,105 @@ class VoiceSession {
     });
   }
 
-  private async respond(text: string, turnId: string, generation: number, output: TurnOutput,
-    history: LlmMessage[], commit: Promise<number>, signal: AbortSignal, speechEndAt: number) {
-    if (!this.auth) return;
+  private async respond(turn: { text: string; turnId: string; generation: number; output: TurnOutput;
+    history: LlmMessage[]; commit: Promise<number>; regex: Triage; signal: AbortSignal; trace: TurnTrace }) {
+    if (!this.auth || !this.tts) return;
     const auth = this.auth;
-    const responseId = output.id;
-    let assistantTurn = 0;
-    let generated = '';
-    let blocked = false;
-    const metrics: TurnMetrics = { speechEndAt, firstTokenAt: null, firstAudioAt: null,
-      inputTokensEstimate: 0, llmChars: 0, ttsChars: 0, audioBytes: 0 };
+    const tts = this.tts;
+    const { text, turnId, generation, output, history, signal, trace } = turn;
+    const language = turnLanguage(text);
+    tts.setVoice({ languageCode: language === 'hi' ? 'hi-IN' : 'en-IN', speaker: config.ttsSpeaker });
+    const ids = { turnId, generationId: output.id };
+    const current = () => generation === this.generation;
+    const messages: LlmMessage[] = [{ role: 'system', content: this.systemPrompt }, ...history];
+    const recent = history.filter(message => message.role === 'user').slice(-3, -1).map(message => message.content);
+    const runner = new TurnRunner({
+      streamLlm: (llmSignal, hooks) => streamLisa(messages, llmSignal, hooks),
+      triage: triageSignal => assessStudentUtterance(text, triageSignal, recent),
+      review: clause => this.reviews.run(() => checkLisaSegment(clause, { level: 'LOW', action: 'continue' }, undefined, text)),
+      synthesize: (clause, index, onChunk, ttsSignal) => tts.speak(clause, index, onChunk, ttsSignal),
+      emit: (type, extra = {}) => {
+        if (!current() && type !== 'risk') return;
+        this.event(type, { ...ids, ...(type === 'risk' ? { policyVersion: POLICY_VERSION } : {}), ...extra });
+      },
+      sendAudio: pcm => {
+        if (this.socket.readyState !== WebSocket.OPEN) return;
+        if (this.socket.bufferedAmount > 64 * 1024) throw new Error('playback_backpressure');
+        this.socket.send(pcm, { binary: true });
+      },
+      isCurrent: current,
+      playing: () => { if (current()) this.state = 'playing'; },
+      triaged: triage => this.persistRisk(auth, turnId, triage),
+      reviewed: (segmentIndex, review) => this.persistReview(auth, output.id, segmentIndex, review),
+    }, { language, regex: turn.regex, gateMs: config.voiceTriageGateMs, outputReview: config.voiceOutputReview, signal, trace });
+    output.segments = runner.segments;
     try {
-      this.event('processing', { turnId, generationId: responseId, stage: 'student_safety' });
-      const [triage, committedTurn] = await Promise.all([
-        assessStudentUtterance(text, signal,
-          history.filter(message => message.role === 'user').slice(-3, -1).map(message => message.content)),
-        commit,
-      ]);
-      assistantTurn = committedTurn;
-      this.event('risk', { turnId, generationId: responseId, level: triage.level,
-        action: triage.action, policyVersion: POLICY_VERSION });
-      if (auth.transcriptConsent) await prisma.riskEvent.create({ data: {
-        conversationId: auth.conversationId, turnId, level: triage.level, evidence: triage.evidence,
-        action: triage.action, policyVersion: POLICY_VERSION,
-      } });
-      if (signal.aborted || generation !== this.generation) return;
-      if (triage.level !== 'LOW') {
-        generated = triage.level === 'URGENT' ? URGENT_SUPPORT : SAFETY_CLARIFICATION;
-        await this.speak(generated, 0, output, generation, signal, triage, true, metrics, text);
-      } else {
-        this.event('processing', { turnId, generationId: responseId, stage: 'lisa_generation' });
-        metrics.inputTokensEstimate = Math.ceil((this.systemPrompt.length +
-          history.reduce((n, m) => n + m.content.length, 0)) / 4);
-        let pending = '';
-        for await (const token of streamLisa([{ role: 'system', content: this.systemPrompt }, ...history], signal)) {
-          if (signal.aborted || generation !== this.generation) return;
-          if (metrics.firstTokenAt === null) metrics.firstTokenAt = performance.now();
-          metrics.llmChars += token.length;
-          generated += token;
-          pending += token;
-          if (generated.length > 1600) throw new Error('response_too_long');
-          let split = pending.search(/[.!?।]\s/u);
-          if (split >= 18) split += 1;
-          else if (pending.length >= 120) split = pending.lastIndexOf(' ', 120);
-          else split = -1;
-          if (split >= 18) {
-            const clause = pending.slice(0, split).trim();
-            pending = pending.slice(split).trimStart();
-            await this.speak(clause, output.segments.length, output, generation, signal, triage, false, metrics, text);
-          }
-        }
-        if (pending.trim() && !signal.aborted && generation === this.generation) {
-          await this.speak(pending.trim(), output.segments.length, output, generation, signal, triage, false, metrics, text);
-        }
-      }
-      if (!signal.aborted && generation === this.generation) this.history.push({ role: 'assistant', content: output.segments.join(' ') });
-    } catch (error) {
-      if (!signal.aborted) {
-        blocked = error instanceof Error && error.message === 'response_blocked';
-        this.fail(blocked ? 'response_blocked' : 'generation_failed', true);
-        if (generation === this.generation && output.segments.length === 0) {
-          try {
-            await this.speak(RESPONSE_UNAVAILABLE, output.segments.length, output, generation,
-              signal, { level: 'LOW', action: 'continue' }, true, metrics, text);
-          } catch {
-            if (!output.segments.includes(RESPONSE_UNAVAILABLE)) this.event('response_text', {
-              text: RESPONSE_UNAVAILABLE, segmentIndex: output.segments.length, serviceMessage: true,
-            });
-          }
-        }
-      }
+      await runner.run();
+      if (!signal.aborted && current()) this.history.push({ role: 'assistant', content: output.segments.join(' ') });
     } finally {
-      this.event('turn_metrics', {
-        generationId: responseId, turnId,
-        speechEndToFirstTokenMs: metrics.firstTokenAt === null ? null : Math.round(metrics.firstTokenAt - metrics.speechEndAt),
-        speechEndToFirstAudioChunkMs: metrics.firstAudioAt === null ? null : Math.round(metrics.firstAudioAt - metrics.speechEndAt),
-        generatedChars: generated.length, ttsChars: metrics.ttsChars, audioBytes: metrics.audioBytes,
-        inputTokensEstimate: metrics.inputTokensEstimate,
-        outputTokensEstimate: Math.ceil(metrics.llmChars / 4),
-        estimatedLlmAndTtsCostUsd: Number((
-          metrics.inputTokensEstimate * config.costLlmInputUsdPerMillionTokens / 1_000_000 +
-          Math.ceil(metrics.llmChars / 4) * config.costLlmOutputUsdPerMillionTokens / 1_000_000 +
-          metrics.ttsChars * config.costTtsUsdPer1000Chars / 1000
-        ).toFixed(6)), estimateOnly: true,
-        interrupted: signal.aborted,
-      });
-      if (auth.transcriptConsent && assistantTurn > 0 && generated.trim()) {
-        const deliveredContent = this.deliveredText(output);
-        const status = signal.aborted || blocked ? 'INTERRUPTED'
-          : output.delivered.size === output.segments.length && output.segments.length > 0 ? 'DELIVERED' : 'PENDING';
-        const row = await prisma.$transaction(async tx => {
-          await tx.conversation.update({
-            where: { id: auth.conversationId, status: 'ACTIVE' }, data: { updatedAt: new Date() },
-          });
-          return tx.message.create({ data: {
-            conversationId: auth.conversationId, role: 'ASSISTANT', content: generated.slice(0, 1600),
-            deliveredContent, deliveryStatus: status, turnNumber: assistantTurn, clientTurnId: turnId,
-          } });
-        }).catch(() => null);
-        if (row) {
-          output.messageId = row.id;
-          if (output.delivered.size) await prisma.message.updateMany({
-            where: { id: row.id, conversationId: auth.conversationId },
-            data: { deliveredContent: this.deliveredText(output),
-              deliveryStatus: signal.aborted || blocked ? 'INTERRUPTED' :
-                output.delivered.size === output.segments.length ? 'DELIVERED' : 'PENDING' },
-          });
-        }
-      }
+      this.emitTurnMetrics(runner, trace, output.id, signal.aborted);
+      await this.persistAssistant(auth, turn.commit, turnId, output, signal.aborted || runner.blocked);
     }
   }
 
-  private async speak(text: string, segmentIndex: number, output: TurnOutput, generation: number,
-    signal: AbortSignal, triage: Triage, policyResponse: boolean, metrics: TurnMetrics, studentUtterance: string) {
-    if (!this.auth || signal.aborted || generation !== this.generation) return;
-    const allowedPolicyText = text === URGENT_SUPPORT || text === SAFETY_CLARIFICATION || text === RESPONSE_UNAVAILABLE;
-    if (!policyResponse) this.event('processing', { generationId: output.id, stage: 'response_review' });
-    const review = policyResponse && allowedPolicyText
-      ? { decision: 'ALLOW' as const, reasonCode: 'fixed_safety_response' }
-      : await checkLisaSegment(text, triage, signal, studentUtterance);
-    if (this.auth.transcriptConsent) await prisma.responseReview.create({ data: {
-      conversationId: this.auth.conversationId, generationId: output.id, segmentIndex,
-      decision: review.decision, reasonCode: review.reasonCode, policyVersion: POLICY_VERSION,
-    } });
-    if (review.decision !== 'ALLOW') throw new Error('response_blocked');
-    if (signal.aborted || generation !== this.generation) return;
-    output.segments.push(text);
-    this.event('response_text', { text, segmentIndex, serviceMessage: text === RESPONSE_UNAVAILABLE });
-    this.event('processing', { generationId: output.id, stage: 'speech_synthesis' });
-    let chunkIndex = 0;
-    await streamSarvamPcm(text, signal, chunk => {
-      if (signal.aborted || generation !== this.generation || this.socket.readyState !== WebSocket.OPEN) return;
-      if (this.socket.bufferedAmount > 64 * 1024) throw new Error('playback_backpressure');
-      if (chunkIndex === 0) {
-        if (metrics.firstAudioAt === null) metrics.firstAudioAt = performance.now();
-        this.state = 'playing';
-        this.event('audio_start', { segmentIndex, format: { encoding: 'pcm_s16le', sampleRate: 24000, channels: 1 } });
-      }
-      this.event('audio_chunk', { segmentIndex, chunkIndex: chunkIndex++, byteLength: chunk.length });
-      this.socket.send(chunk, { binary: true });
-      metrics.audioBytes += chunk.length;
+  private emitTurnMetrics(runner: TurnRunner, trace: TurnTrace, generationId: string, interrupted: boolean) {
+    const stages = trace.stages();
+    const inputTokensEstimate = Math.ceil((this.systemPrompt.length + this.history.reduce((n, m) => n + m.content.length, 0)) / 4);
+    const inputTokens = runner.usage?.promptTokens ?? inputTokensEstimate;
+    const outputTokens = runner.usage?.completionTokens ?? Math.ceil(runner.llmChars / 4);
+    this.event('turn_metrics', {
+      generationId, turnId: trace.turnId, stages,
+      speechEndToFirstTokenMs: stages.llmFirstToken, speechEndToFirstAudioChunkMs: stages.firstAudioSent,
+      generatedChars: runner.generated.length, ttsChars: runner.ttsChars, audioBytes: runner.audioBytes,
+      inputTokensEstimate, outputTokensEstimate: Math.ceil(runner.llmChars / 4),
+      usage: runner.usage, estimatedLlmAndTtsCostUsd: Number((
+        inputTokens * config.costLlmInputUsdPerMillionTokens / 1_000_000 +
+        outputTokens * config.costLlmOutputUsdPerMillionTokens / 1_000_000 +
+        runner.ttsChars * config.costTtsUsdPer1000Chars / 1000
+      ).toFixed(6)), estimateOnly: runner.usage === null,
+      interrupted,
     });
-    if (!chunkIndex && !signal.aborted) throw new Error('tts_empty_audio');
-    if (chunkIndex) metrics.ttsChars += text.length;
-    if (!signal.aborted && generation === this.generation) this.event('audio_end', { segmentIndex });
+    console.log(trace.logLine());
+  }
+
+  private persistRisk(auth: Auth, turnId: string, triage: Triage) {
+    if (!auth.transcriptConsent) return;
+    void prisma.riskEvent.create({ data: {
+      conversationId: auth.conversationId, turnId, level: triage.level, evidence: triage.evidence,
+      action: triage.action, policyVersion: POLICY_VERSION,
+    } }).catch(() => console.warn(`[voice] ${this.id} risk_persist_failed`));
+  }
+
+  private persistReview(auth: Auth, generationId: string, segmentIndex: number, review: Review) {
+    if (!auth.transcriptConsent) return;
+    void prisma.responseReview.create({ data: {
+      conversationId: auth.conversationId, generationId, segmentIndex,
+      decision: review.decision, reasonCode: review.reasonCode, policyVersion: POLICY_VERSION,
+    } }).catch(() => console.warn(`[voice] ${this.id} review_persist_failed`));
+  }
+
+  private async persistAssistant(auth: Auth, commit: Promise<number>, turnId: string, output: TurnOutput, interrupted: boolean) {
+    const content = output.segments.join(' ').slice(0, 1600);
+    if (!auth.transcriptConsent || !content.trim()) return;
+    const assistantTurn = await commit.catch(() => 0);
+    if (assistantTurn <= 0) return;
+    const status = () => interrupted ? 'INTERRUPTED'
+      : output.delivered.size === output.segments.length && output.segments.length > 0 ? 'DELIVERED' : 'PENDING';
+    const row = await prisma.$transaction(async tx => {
+      await tx.conversation.update({
+        where: { id: auth.conversationId, status: 'ACTIVE' }, data: { updatedAt: new Date() },
+      });
+      return tx.message.create({ data: {
+        conversationId: auth.conversationId, role: 'ASSISTANT', content,
+        deliveredContent: this.deliveredText(output), deliveryStatus: status(), turnNumber: assistantTurn, clientTurnId: turnId,
+      } });
+    }).catch(() => null);
+    if (!row) return;
+    output.messageId = row.id;
+    if (output.delivered.size) await prisma.message.updateMany({
+      where: { id: row.id, conversationId: auth.conversationId },
+      data: { deliveredContent: this.deliveredText(output), deliveryStatus: status() },
+    });
   }
 
   private deliveredText(output: TurnOutput) { return output.segments.filter((_, index) => output.delivered.has(index)).join(' '); }
@@ -397,6 +381,7 @@ class VoiceSession {
     this.state = 'ending';
     this.abort?.abort();
     this.stt?.close();
+    this.tts?.close();
     this.acoustic?.close();
     await Promise.allSettled([...this.pendingTasks]);
     let summaryStatus = 'none';
