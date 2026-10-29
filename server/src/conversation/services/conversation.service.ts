@@ -2,7 +2,7 @@ import { prisma } from '../../db';
 import { chatWithLisa } from './llm.service';
 import { buildConversationContext } from './context.service';
 import {
-  POLICY_VERSION, RESPONSE_UNAVAILABLE, SAFETY_CLARIFICATION, URGENT_SUPPORT,
+  POLICY_VERSION, RESPONSE_UNAVAILABLE, SAFETY_CLARIFICATION, URGENT_SUPPORT, turnLanguage,
 } from '../../voice/policy';
 import { assessStudentUtterance, checkLisaSegment } from '../../voice/safety-classifier';
 
@@ -57,14 +57,15 @@ export async function processMessage(conversationId: string, userId: string, use
   }
 
   let response: string;
-  if (triage.level === 'URGENT') response = URGENT_SUPPORT;
-  else if (triage.level === 'UNKNOWN') response = SAFETY_CLARIFICATION;
+  const language = turnLanguage(content);
+  if (triage.level === 'URGENT') response = URGENT_SUPPORT[language];
+  else if (triage.level === 'UNKNOWN') response = SAFETY_CLARIFICATION[language];
   else {
     const context = await buildConversationContext(userId, conversationId);
     const messages = conversation.transcriptConsent
       ? context.messages : [...context.messages, { role: 'user', content }];
     const generated = await chatWithLisa(messages, context.systemPrompt);
-    response = (await checkLisaSegment(generated, triage, undefined, content)).decision === 'ALLOW' ? generated : RESPONSE_UNAVAILABLE;
+    response = (await checkLisaSegment(generated, triage, undefined, content)).decision === 'ALLOW' ? generated : RESPONSE_UNAVAILABLE[language];
   }
 
   if (conversation.transcriptConsent) {

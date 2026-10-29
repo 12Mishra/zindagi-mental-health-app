@@ -19,3 +19,15 @@ test('response review blocks diagnosis and unresolved student safety', () => {
   assert.equal(reviewLisaSegment('That sounds difficult. Would you like to tell me more?', low).decision, 'ALLOW');
   assert.equal(reviewLisaSegment('That sounds difficult.', { level: 'UNKNOWN', action: 'clarify_safety' }).decision, 'BLOCK');
 });
+
+test('TTS language is chosen per turn: Devanagari or Roman Hindi is hi, plain English is en', async () => {
+  const { turnLanguage, URGENT_SUPPORT, isFixedPolicyText } = await import('./policy');
+  assert.equal(turnLanguage('मुझे नींद नहीं आ रही'), 'hi');
+  assert.equal(turnLanguage('mujhe exams ka stress hai'), 'hi');
+  assert.equal(turnLanguage('I feel stressed about my exams and tension at home'), 'en');
+  for (const text of [URGENT_SUPPORT.en, URGENT_SUPPORT.hi]) {
+    assert.match(text, /14416/);
+    assert.match(text, /112/);
+    assert.equal(isFixedPolicyText(text), true);
+  }
+});
