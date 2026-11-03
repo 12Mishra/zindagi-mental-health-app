@@ -51,11 +51,11 @@ async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
   return data as T;
 }
 
-export const startConversation = (token: string, moodBefore: string[], moodNote?: string, transcriptConsent = false) =>
+export const startConversation = (token: string, moodBefore: string[], moodNote?: string, transcriptConsent = false, memoryConsent = true) =>
   apiRequest<{ id: string; status: string }>('/api/conversations', {
     method: 'POST',
     token,
-    body: { moodBefore, moodNote, transcriptConsent },
+    body: { moodBefore, moodNote, transcriptConsent, memoryConsent },
   });
 
 export const sendMessage = (token: string, conversationId: string, text: string) =>

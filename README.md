@@ -6,6 +6,8 @@ The Expo app supports browser and Android development-build voice sessions. The 
 
 - [Architecture and decisions](docs/architecture.md)
 - [Voice protocol](docs/voice-protocol.md)
+- [P1: hot-path latency brief](docs/priority-1-hot-path.md)
+- [P2: memory and context brief](docs/priority-2-memory-context.md)
 - [Local setup and demo runbook](docs/demo-runbook.md)
 - [Model and data preparation](training/README.md)
 

@@ -16,6 +16,7 @@ export default function VoiceScreen() {
   const params = useLocalSearchParams<{ moods?: string; note?: string }>();
   const [state, setState] = useState<'idle' | 'connecting' | 'listening' | 'speaking' | 'checking' | 'responding' | 'ending' | 'ended'>('idle');
   const [consent, setConsent] = useState(false);
+  const [memoryConsent, setMemoryConsent] = useState(true);
   const [lines, setLines] = useState<Line[]>([]);
   const [partial, setPartial] = useState('');
   const [notice, setNotice] = useState('');
@@ -35,14 +36,11 @@ export default function VoiceScreen() {
     switch (event.type) {
       case 'ready': setState('listening'); setNotice('Microphone is live. Speak naturally.'); break;
       case 'speech_start': setState('speaking'); setPartial(''); break;
-      case 'speech_end': setState('checking'); setNotice('Checking your message. Please pause while Lisa prepares a reply.'); break;
+      case 'speech_end': setState('checking'); setNotice('Thinking…'); break;
       case 'transcript_partial': setPartial(event.text ?? ''); break;
       case 'transcript_final': setPartial(''); if (event.text) addLine('user', event.text); break;
       case 'processing':
-        if (event.stage === 'student_safety') { setState('checking'); setNotice('Checking your message. Please wait.'); }
-        else if (event.stage === 'lisa_generation') { setState('responding'); setNotice('Lisa is composing a reply. Please pause so a new message does not cancel it.'); }
-        else if (event.stage === 'response_review') setNotice('Checking Lisa’s reply before playback.');
-        else if (event.stage === 'speech_synthesis') setNotice('Preparing Lisa’s speech.');
+        if (event.stage === 'lisa_generation') { setState('checking'); setNotice('Thinking…'); }
         break;
       case 'response_text': if (event.text) addLine('assistant', event.text);
         setState(event.serviceMessage ? 'listening' : 'responding'); setNotice(''); break;
@@ -50,10 +48,11 @@ export default function VoiceScreen() {
       case 'audio_end': setState('listening'); setNotice(''); break;
       case 'interrupted': setState('speaking'); setNotice('Lisa stopped speaking so you can continue.'); break;
       case 'risk':
-        if (!event.provisional) setState('responding');
-        if (event.level === 'URGENT' || event.level === 'UNKNOWN' || event.level === 'ELEVATED')
+        // LOW verdicts can arrive after Lisa already started speaking, so they never change the UI state.
+        if (event.level === 'URGENT' || event.level === 'UNKNOWN' || event.level === 'ELEVATED') {
+          if (!event.provisional) setState('responding');
           setNotice('Lisa is checking your safety before continuing.');
-        else setNotice('Lisa is preparing a reply. On this computer, this may take 15–60 seconds. Please pause so it is not interrupted.');
+        }
         break;
       case 'error': setNotice(`Voice error: ${event.code ?? 'unknown'}`);
         if (event.code === 'generation_failed' || event.code === 'response_blocked' || event.code === 'turn_internal_error')
@@ -69,7 +68,7 @@ export default function VoiceScreen() {
     setState('connecting'); setNotice('Requesting microphone access and connecting...');
     setSummaryStatus('');
     try {
-      const created = await startConversation(token, params.moods?.split(',') ?? [], params.note, consent);
+      const created = await startConversation(token, params.moods?.split(',') ?? [], params.note, consent, memoryConsent);
       conversationId.current = created.id;
       const { ticket } = await issueVoiceTicket(token, created.id);
       const voice = createVoiceClient({ onEvent: onVoiceEvent, onError: message => setNotice(message) });
@@ -126,6 +125,10 @@ export default function VoiceScreen() {
         <View style={styles.consentRow}>
           <Text style={styles.consentText}>Save transcript and summary for future sessions (30 days)</Text>
           <Switch value={consent} onValueChange={setConsent} />
+        </View>
+        <View style={styles.consentRow}>
+          <Text style={styles.consentText}>Lisa remembers a short summary of our chats to support you better (no transcript is kept)</Text>
+          <Switch value={memoryConsent} onValueChange={setMemoryConsent} />
         </View>
         <TouchableOpacity style={styles.primary} onPress={start}>
           <Text style={styles.primaryText}>Start hands-free session</Text>

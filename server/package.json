@@ -11,8 +11,10 @@
     "worker": "node dist/worker/summary-worker.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "memory:migrate": "tsc && node dist/scripts/migrate-p2-memory.js",
+    "memory:embed-backfill": "tsc && node dist/scripts/embed-backfill.js",
     "db:view": "ts-node src/scripts/view-tables.ts",
-    "test": "npm run build && node --test dist/voice/*.test.js"
+    "test": "npm run build && node --test dist/voice/*.test.js dist/memory/*.test.js"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +34,7 @@
     "@prisma/client": "^7.8.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "ioredis": "^6.0.0",
     "pg": "^8.21.0",
     "ws": "^8.21.3"
   }
