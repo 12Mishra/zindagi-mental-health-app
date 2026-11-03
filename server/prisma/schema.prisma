@@ -26,7 +26,7 @@ model User {
   age         Int
   college     String
   sex         Sex
-  history     String[] @default([])
+  history     String[] @default([]) // deprecated: superseded by UserMemory (still written by the auth flow)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -34,6 +34,10 @@ model User {
   sessions        Session[]
   conversations   Conversation[]
   customerProfile CustomerProfile?
+  memory          UserMemory?
+  memorySummaries MemorySummary[]
+  riskHistory     RiskHistory[]
+  observations    ProfileObservation[]
 
   @@index([phoneNumber])
 }
@@ -91,6 +95,8 @@ model Conversation {
   updatedAt         DateTime             @updatedAt
   endedAt           DateTime?
   transcriptConsent Boolean              @default(false)
+  memoryConsent     Boolean              @default(false)
+  languageHint      String?
   retentionUntil    DateTime?
   nextTurnNumber    Int                  @default(1)
   messages          Message[]
@@ -100,6 +106,8 @@ model Conversation {
   riskEvents        RiskEvent[]
   responseReviews   ResponseReview[]
   observations      ProfileObservation[]
+  memorySummary     MemorySummary?
+  riskHistory       RiskHistory[]
 
   @@index([userId, createdAt])
   @@index([retentionUntil])
@@ -156,6 +164,7 @@ model SummaryJob {
   leaseUntil     DateTime?
   nextAttemptAt  DateTime        @default(now())
   lastErrorCode  String?
+  payload        Json? // Redis session snapshot for memory-only sessions (no transcript)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -231,8 +240,9 @@ enum Kosha {
 model ProfileObservation {
   id             String       @id @default(uuid())
   userId         String
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   kosha          Kosha
   observation    String
   evidenceTurnId String
@@ -243,6 +253,7 @@ model ProfileObservation {
   @@index([userId, kosha, createdAt])
 }
 
+// deprecated: replaced by UserMemory + RiskHistory, drop in P7
 model CustomerProfile {
   id        String   @id @default(uuid())
   userId    String   @unique
@@ -252,4 +263,48 @@ model CustomerProfile {
   riskFlags String[] @default([])
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+model UserMemory {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memoryCard  String   @default("")
+  openThreads Json     @default("[]")
+  preferences Json     @default("{}")
+  version     Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+// Survives transcript deletion; embedding is empty when embeddings are not configured.
+model MemorySummary {
+  id               String        @id @default(uuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversationId   String?       @unique
+  conversation     Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  summary          String
+  keyThemes        String[]
+  language         String?
+  embedding        Float[]       @default([])
+  sessionStartedAt DateTime
+  createdAt        DateTime      @default(now())
+
+  @@index([userId, sessionStartedAt])
+}
+
+// Append-only, never overwritten.
+model RiskHistory {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  level          RiskLevel
+  flag           String
+  evidenceTurnId String?
+  policyVersion  String
+  createdAt      DateTime      @default(now())
+
+  @@index([userId, createdAt])
 }

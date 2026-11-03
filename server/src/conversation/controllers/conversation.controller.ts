@@ -2,16 +2,17 @@ import type { NextFunction, Request, Response } from 'express';
 import type { AuthedRequest } from '../../auth/middlewares/auth.middleware';
 import * as conversationService from '../services/conversation.service';
 import { issueVoiceTicket } from '../../voice/tickets';
+import { prepareGreeting } from '../../memory/greeting';
 
 export const startConversationController = async (req: AuthedRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.auth!.userId;
-    const { moodBefore = [], moodNote, transcriptConsent = false } = req.body ?? {};
+    const { moodBefore = [], moodNote, transcriptConsent = false, memoryConsent = true } = req.body ?? {};
     if (!Array.isArray(moodBefore) || moodBefore.some(value => typeof value !== 'string') ||
-        (moodNote !== undefined && typeof moodNote !== 'string') || typeof transcriptConsent !== 'boolean') {
+        (moodNote !== undefined && typeof moodNote !== 'string') || typeof transcriptConsent !== 'boolean' || typeof memoryConsent !== 'boolean') {
       res.status(400).json({ error: 'Invalid conversation options.' }); return;
     }
-    const conversation = await conversationService.startConversation(userId, moodBefore, moodNote, transcriptConsent);
+    const conversation = await conversationService.startConversation(userId, moodBefore, moodNote, transcriptConsent, memoryConsent);
     res.status(201).json(conversation);
   } catch (error) {
     next(error);
@@ -62,16 +63,6 @@ export const getConversationController = async (req: AuthedRequest, res: Respons
   }
 };
 
-export const getUserProfileController = async (req: AuthedRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.auth!.userId;
-    const profile = await conversationService.getUserProfile(userId);
-    res.json(profile || { message: 'Profile not found' });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const getUserSummariesController = async (req: AuthedRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.auth!.userId;
@@ -97,6 +88,8 @@ export const issueVoiceTicketController = async (req: AuthedRequest, res: Respon
   try {
     const result = await issueVoiceTicket(req.auth!.userId, req.auth!.sessionId, String(req.params.id));
     if (!result) { res.status(404).json({ error: 'Active conversation not found.' }); return; }
+    // Background: prefetch long-term memory and pre-generate the opening line while the app connects.
+    void prepareGreeting(String(req.params.id), req.auth!.userId);
     res.json(result);
   } catch (error) { next(error); }
 };

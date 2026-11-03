@@ -2,19 +2,26 @@ import { randomUUID } from 'node:crypto';
 import WebSocket, { WebSocketServer } from 'ws';
 import { config } from '../config';
 import { prisma } from '../db';
-import { buildConversationContext } from '../conversation/services/context.service';
+import { SYSTEM_PROMPT, withCheckin } from '../conversation/services/context.service';
+import { ContextAgent, createComplete } from '../memory/context-agent';
+import { staticGreeting, takeGreeting } from '../memory/greeting';
+import { SessionContext } from '../memory/session-context';
+import { search } from '../memory/vector';
+import type { PromptResult } from '../memory/prompt-builder';
 import { endConversation } from '../conversation/services/conversation.service';
 import { consumeVoiceTicket } from './tickets';
 import { AcousticAnalyzer } from './acoustic';
-import { DeepgramStream, streamLisa, warmLisa, type LlmMessage } from './providers';
+import { DeepgramStream, streamLisa, warmLisa } from './providers';
+import { SpeechPipeline } from './speech-pipeline';
 import { assessStudentUtterance, checkLisaSegment } from './safety-classifier';
-import { POLICY_VERSION, triageStableUtterance, turnLanguage, type Review, type Triage } from './policy';
+import { POLICY_VERSION, reviewLisaSegment, triageStableUtterance, turnLanguage, type Review, type Triage } from './policy';
 import { TurnTrace } from './trace';
 import { createTtsSession, type TtsSession } from './tts-session';
 import { BargeInDetector } from './turn-taking';
 import { TurnRunner } from './turn';
 
-type Auth = { userId: string; conversationId: string; sessionId: string; transcriptConsent: boolean };
+type Auth = { userId: string; conversationId: string; sessionId: string; transcriptConsent: boolean; memoryConsent: boolean; moodBefore: string[]; moodNote: string | null };
+type BuiltPrompt = PromptResult & { promptBuildMs: number };
 type ClientEvent = { type?: string; generationId?: string; segmentIndex?: number; ticket?: string; format?: unknown; v?: number };
 type State = 'connecting' | 'listening' | 'user_speaking' | 'endpointing' | 'generating' | 'playing' | 'interrupted' | 'ending' | 'closed';
 type TurnOutput = { id: string; segments: string[]; delivered: Set<number>; messageId: string | null };
@@ -54,8 +61,7 @@ class VoiceSession {
   private abort: AbortController | null = null;
   private pendingTasks = new Set<Promise<void>>();
   private commitTail: Promise<void> = Promise.resolve();
-  private history: LlmMessage[] = [];
-  private systemPrompt = '';
+  private ctx: SessionContext | null = null;
   private muted = false;
   private lastActivity = Date.now();
   private output: TurnOutput | null = null;
@@ -130,10 +136,9 @@ class VoiceSession {
         this.fail('provider_not_configured', false); return;
       }
       this.auth = auth;
-      const context = await buildConversationContext(auth.userId, auth.conversationId);
-      this.systemPrompt = context.systemPrompt;
-      this.history = context.messages.filter(m => m.role === 'user' || m.role === 'assistant')
-        .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })).slice(-20);
+      // Long-term memory comes from the ticket-time Redis prefetch (DB fallback); the context agent is optional.
+      this.ctx = await SessionContext.open(auth.conversationId, auth.userId, withCheckin(SYSTEM_PROMPT, auth.moodBefore, auth.moodNote),
+        { agent: new ContextAgent(createComplete()), recall: search });
       this.stt = new DeepgramStream({
         speechStart: () => this.onSpeechStart(),
         partial: text => this.onPartial(text),
@@ -151,14 +156,18 @@ class VoiceSession {
       this.event('ready', { format: { encoding: 'pcm_s16le', sampleRate: 16000, channels: 1 },
         playback: { encoding: 'pcm_s16le', sampleRate: 24000, channels: 1 }, model: config.voiceLlmModel });
       if (config.voiceLlmWarmup) void warmLisa();
+      void this.greet();
     } catch { this.fail('voice_start_failed', false); }
     finally { admitting--; }
   }
+
+  private currentState(): State { return this.state; }
 
   private get speaking() { return this.state === 'generating' || this.state === 'playing'; }
 
   private onPartial(text: string) {
     this.event('transcript_partial', { text });
+    this.ctx?.onPartial(text);
     if (this.speaking && this.bargeIn.partial(text)) this.cancelGeneration();
     if (Date.now() - this.lastPartialCheck < 250) return;
     this.lastPartialCheck = Date.now();
@@ -194,13 +203,12 @@ class VoiceSession {
     this.bargeIn.arm();
     const output: TurnOutput = { id: this.generationId, segments: [], delivered: new Set(), messageId: null };
     this.output = output;
-    this.history.push({ role: 'user', content: text });
-    this.history = this.history.slice(-20);
-    const history = [...this.history];
+    const memoryTurn = this.ctx?.addUser(text) ?? 0;
+    const prompt = this.ctx?.build() ?? null;
     // Persisting the user row runs in parallel; it is only awaited before writing the assistant row.
     const commit = this.commitTail.then(() => this.persistUser(text, turnId));
     this.commitTail = commit.then(() => {}, () => {});
-    const task = this.respond({ text, turnId, generation, output, history, commit, regex,
+    const task = this.respond({ text, turnId, generation, output, prompt, memoryTurn, commit, regex,
       signal: this.abort.signal, trace: trace.withTurnId(turnId) }).catch(() => {
       this.fail('turn_internal_error', true);
     }).finally(() => {
@@ -238,17 +246,17 @@ class VoiceSession {
   }
 
   private async respond(turn: { text: string; turnId: string; generation: number; output: TurnOutput;
-    history: LlmMessage[]; commit: Promise<number>; regex: Triage; signal: AbortSignal; trace: TurnTrace }) {
-    if (!this.auth || !this.tts) return;
+    prompt: BuiltPrompt | null; memoryTurn: number; commit: Promise<number>; regex: Triage; signal: AbortSignal; trace: TurnTrace }) {
+    if (!this.auth || !this.tts || !turn.prompt) return;
     const auth = this.auth;
     const tts = this.tts;
-    const { text, turnId, generation, output, history, signal, trace } = turn;
+    const { text, turnId, generation, output, prompt, signal, trace } = turn;
     const language = turnLanguage(text);
     tts.setVoice({ languageCode: language === 'hi' ? 'hi-IN' : 'en-IN', speaker: config.ttsSpeaker });
     const ids = { turnId, generationId: output.id };
     const current = () => generation === this.generation;
-    const messages: LlmMessage[] = [{ role: 'system', content: this.systemPrompt }, ...history];
-    const recent = history.filter(message => message.role === 'user').slice(-3, -1).map(message => message.content);
+    const messages = prompt.messages;
+    const recent = messages.filter(message => message.role === 'user').slice(-3, -1).map(message => message.content);
     const runner = new TurnRunner({
       streamLlm: (llmSignal, hooks) => streamLisa(messages, llmSignal, hooks),
       triage: triageSignal => assessStudentUtterance(text, triageSignal, recent),
@@ -265,26 +273,29 @@ class VoiceSession {
       },
       isCurrent: current,
       playing: () => { if (current()) this.state = 'playing'; },
-      triaged: triage => this.persistRisk(auth, turnId, triage),
+      triaged: triage => { this.ctx?.recordRisk(triage.level); this.persistRisk(auth, turnId, triage); },
       reviewed: (segmentIndex, review) => this.persistReview(auth, output.id, segmentIndex, review),
     }, { language, regex: turn.regex, gateMs: config.voiceTriageGateMs, outputReview: config.voiceOutputReview, signal, trace });
     output.segments = runner.segments;
     try {
       await runner.run();
-      if (!signal.aborted && current()) this.history.push({ role: 'assistant', content: output.segments.join(' ') });
     } finally {
-      this.emitTurnMetrics(runner, trace, output.id, signal.aborted);
+      // Memory keeps only what the student heard; a completed turn whose playback ack is late falls back to the full text.
+      const interrupted = signal.aborted || runner.blocked;
+      this.ctx?.addAssistant(turn.memoryTurn, () => this.deliveredText(output) || (interrupted ? '' : output.segments.join(' ')));
+      void this.ctx?.afterTurn();
+      this.emitTurnMetrics(runner, trace, output.id, signal.aborted, prompt);
       await this.persistAssistant(auth, turn.commit, turnId, output, signal.aborted || runner.blocked);
     }
   }
 
-  private emitTurnMetrics(runner: TurnRunner, trace: TurnTrace, generationId: string, interrupted: boolean) {
+  private emitTurnMetrics(runner: TurnRunner, trace: TurnTrace, generationId: string, interrupted: boolean, prompt: BuiltPrompt) {
     const stages = trace.stages();
-    const inputTokensEstimate = Math.ceil((this.systemPrompt.length + this.history.reduce((n, m) => n + m.content.length, 0)) / 4);
+    const inputTokensEstimate = prompt.estimatedTokens;
     const inputTokens = runner.usage?.promptTokens ?? inputTokensEstimate;
     const outputTokens = runner.usage?.completionTokens ?? Math.ceil(runner.llmChars / 4);
     this.event('turn_metrics', {
-      generationId, turnId: trace.turnId, stages,
+      generationId, turnId: trace.turnId, stages, promptBuildMs: prompt.promptBuildMs,
       speechEndToFirstTokenMs: stages.llmFirstToken, speechEndToFirstAudioChunkMs: stages.firstAudioSent,
       generatedChars: runner.generated.length, ttsChars: runner.ttsChars, audioBytes: runner.audioBytes,
       inputTokensEstimate, outputTokensEstimate: Math.ceil(runner.llmChars / 4),
@@ -295,7 +306,7 @@ class VoiceSession {
       ).toFixed(6)), estimateOnly: runner.usage === null,
       interrupted,
     });
-    console.log(trace.logLine());
+    console.log(`${trace.logLine()} promptBuildMs=${prompt.promptBuildMs}`);
   }
 
   private persistRisk(auth: Auth, turnId: string, triage: Triage) {
@@ -351,6 +362,43 @@ class VoiceSession {
     });
   }
 
+  /** Opening line: the pre-generated personalised one if Redis has it within 300 ms, else the static greeting. */
+  private async greet() {
+    const auth = this.auth, tts = this.tts, ctx = this.ctx;
+    if (!auth || !tts || !ctx) return;
+    const text = (await takeGreeting(auth.conversationId)) ?? staticGreeting(ctx.preferences.language);
+    if (this.state !== 'listening' || !this.auth || reviewLisaSegment(text, { level: 'LOW', action: 'continue' }).decision !== 'ALLOW') return;
+    const generation = ++this.generation;
+    this.generationId = randomUUID();
+    this.abort = new AbortController();
+    const signal = this.abort.signal;
+    const output: TurnOutput = { id: this.generationId, segments: [text], delivered: new Set(), messageId: null };
+    this.output = output;
+    this.state = 'generating';
+    this.bargeIn.arm();
+    const ids = { turnId: `${this.id}-greeting`, generationId: output.id };
+    this.lastTurnId = ids.turnId;
+    const current = () => generation === this.generation && !signal.aborted;
+    tts.setVoice({ languageCode: turnLanguage(text) === 'hi' ? 'hi-IN' : 'en-IN', speaker: config.ttsSpeaker });
+    this.event('response_text', { ...ids, text, segmentIndex: 0, serviceMessage: false, greeting: true });
+    const format = { encoding: 'pcm_s16le', sampleRate: 24000, channels: 1 };
+    const pipeline = new SpeechPipeline((clause, index, onChunk, synthSignal) => tts.speak(clause, index, onChunk, synthSignal), {
+      start: segmentIndex => { if (!current()) return; this.state = 'playing'; this.event('audio_start', { ...ids, segmentIndex, format }); },
+      chunk: (segmentIndex, chunkIndex, pcm) => {
+        if (!current()) return;
+        this.event('audio_chunk', { ...ids, segmentIndex, chunkIndex, byteLength: pcm.length });
+        if (this.socket.readyState !== WebSocket.OPEN) return;
+        if (this.socket.bufferedAmount > 64 * 1024) throw new Error('playback_backpressure');
+        this.socket.send(pcm, { binary: true });
+      },
+      end: segmentIndex => { if (current()) this.event('audio_end', { ...ids, segmentIndex }); },
+    }, signal);
+    pipeline.push(text, 0);
+    try { await pipeline.finish(); } catch { /* greeting is best effort */ }
+    const after = this.currentState();
+    if (current() && after !== 'ending' && after !== 'closed') { this.state = 'listening'; this.bargeIn.disarm(); }
+  }
+
   private checkLifetime() {
     if (this.state === 'ending' || this.state === 'closed') return;
     if (Date.now() - this.lastActivity > 60_000) this.fail('idle_timeout', false);
@@ -386,7 +434,10 @@ class VoiceSession {
     await Promise.allSettled([...this.pendingTasks]);
     let summaryStatus = 'none';
     if (this.auth) {
-      try { summaryStatus = (await endConversation(this.auth.conversationId, this.auth.userId)).summaryStatus; }
+      // The Redis snapshot (rolling summary + notes, never transcript) feeds the memory worker for memory-only sessions.
+      const closing = this.ctx?.close().catch(() => null) ?? Promise.resolve(null);
+      const snapshot = await Promise.race([closing, new Promise<null>(resolve => setTimeout(() => resolve(null), 4000))]);
+      try { summaryStatus = (await endConversation(this.auth.conversationId, this.auth.userId, this.auth.memoryConsent ? snapshot : null)).summaryStatus; }
       catch { summaryStatus = 'error'; }
     }
     if (!disconnected) {

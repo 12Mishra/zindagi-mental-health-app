@@ -1,18 +1,24 @@
 import { prisma } from '../../db';
 import { chatWithLisa } from './llm.service';
-import { buildConversationContext } from './context.service';
+import { SYSTEM_PROMPT, withCheckin } from './context.service';
+import { buildPrompt } from '../../memory/prompt-builder';
+import { loadLongTerm } from '../../memory/long-term';
+import { loadSession, emptySession } from '../../memory/session-memory';
+import { config } from '../../config';
+import type { SessionSnapshot } from '../../memory/session-context';
 import {
   POLICY_VERSION, RESPONSE_UNAVAILABLE, SAFETY_CLARIFICATION, URGENT_SUPPORT, turnLanguage,
 } from '../../voice/policy';
 import { assessStudentUtterance, checkLisaSegment } from '../../voice/safety-classifier';
 
-export async function startConversation(userId: string, moodBefore: string[], moodNote?: string, transcriptConsent = false) {
+export async function startConversation(userId: string, moodBefore: string[], moodNote?: string, transcriptConsent = false, memoryConsent = true) {
   return prisma.conversation.create({
     data: {
       userId,
       moodBefore: moodBefore.slice(0, 8),
       moodNote: moodNote?.slice(0, 500),
       transcriptConsent,
+      memoryConsent,
       retentionUntil: new Date(Date.now() + (transcriptConsent ? 30 : 1) * 24 * 60 * 60_000),
     },
   });
@@ -61,10 +67,23 @@ export async function processMessage(conversationId: string, userId: string, use
   if (triage.level === 'URGENT') response = URGENT_SUPPORT[language];
   else if (triage.level === 'UNKNOWN') response = SAFETY_CLARIFICATION[language];
   else {
-    const context = await buildConversationContext(userId, conversationId);
-    const messages = conversation.transcriptConsent
-      ? context.messages : [...context.messages, { role: 'user', content }];
-    const generated = await chatWithLisa(messages, context.systemPrompt);
+    // Same prompt builder as voice: memory card + session notes in the system block, recent turns verbatim.
+    const [longTerm, session, recent] = await Promise.all([
+      loadLongTerm(userId), loadSession(conversationId),
+      conversation.transcriptConsent
+        ? prisma.message.findMany({ where: { conversationId }, orderBy: { turnNumber: 'desc' }, take: config.workingTurns })
+        : Promise.resolve([]),
+    ]);
+    const turns = recent.reverse().flatMap(m => {
+      const text = m.role === 'ASSISTANT' ? m.deliveredContent : m.content;
+      return text ? [{ role: m.role === 'USER' ? 'user' as const : 'assistant' as const, content: text.slice(0, 1200) }] : [];
+    });
+    if (!conversation.transcriptConsent) turns.push({ role: 'user', content });
+    const prompt = buildPrompt({
+      systemPrompt: withCheckin(SYSTEM_PROMPT, conversation.moodBefore, conversation.moodNote), longTerm,
+      session: { ...emptySession(), ...session, turnBrief: null, recalled: [] }, turns, budgetTokens: config.promptTokenBudget,
+    });
+    const generated = await chatWithLisa(prompt.messages.slice(1), prompt.messages[0].content);
     response = (await checkLisaSegment(generated, triage, undefined, content)).decision === 'ALLOW' ? generated : RESPONSE_UNAVAILABLE[language];
   }
 
@@ -81,20 +100,21 @@ export async function processMessage(conversationId: string, userId: string, use
   return { response, turnNumber: userTurnNumber + 1 };
 }
 
-export async function endConversation(conversationId: string, userId: string) {
+export async function endConversation(conversationId: string, userId: string, snapshot: SessionSnapshot | null = null) {
   return prisma.$transaction(async tx => {
     const conversation = await tx.conversation.findFirst({
-      where: { id: conversationId, userId }, select: { id: true, status: true, transcriptConsent: true },
+      where: { id: conversationId, userId }, select: { id: true, status: true, transcriptConsent: true, memoryConsent: true },
     });
     if (!conversation) throw new Error('Conversation not found');
     if (conversation.status === 'ACTIVE') {
       await tx.conversation.update({ where: { id: conversationId }, data: { status: 'ENDED', endedAt: new Date() } });
-      if (conversation.transcriptConsent) {
-        const count = await tx.message.count({ where: { conversationId } });
-        if (count > 0) await tx.summaryJob.upsert({
-          where: { conversationId }, create: { conversationId }, update: {},
-        });
-      }
+      // Transcript consent summarises the transcript; memory consent alone summarises the Redis snapshot (no transcript).
+      const count = conversation.transcriptConsent ? await tx.message.count({ where: { conversationId } }) : 0;
+      const hasSnapshot = !!snapshot && (!!snapshot.rollingSummary.trim() || Object.values(snapshot.notes).some(list => list.length > 0));
+      const payload = conversation.memoryConsent && hasSnapshot ? snapshot as object : undefined;
+      if (count > 0 || payload) await tx.summaryJob.upsert({
+        where: { conversationId }, create: { conversationId, payload }, update: {},
+      });
     }
     const job = await tx.summaryJob.findUnique({ where: { conversationId }, select: { state: true } });
     return { summaryStatus: job?.state.toLowerCase() ?? 'none' };
@@ -118,8 +138,6 @@ export async function getConversation(conversationId: string, userId: string) {
 export const getUserSummaries = (userId: string, limit: number) => prisma.conversationSummary.findMany({
   where: { conversation: { userId } }, orderBy: { createdAt: 'desc' }, take: Math.min(Math.max(limit, 1), 20),
 });
-
-export const getUserProfile = (userId: string) => prisma.customerProfile.findUnique({ where: { userId } });
 
 export const getSavedConversations = (userId: string, limit: number) => prisma.conversation.findMany({
   where: { userId, transcriptConsent: true, status: 'ENDED' },

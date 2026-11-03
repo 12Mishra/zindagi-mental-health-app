@@ -5,13 +5,13 @@ import {
   sendMessageController,
   endConversationController,
   getConversationController,
-  getUserProfileController,
   getUserSummariesController,
   issueVoiceTicketController,
   deleteConversationController,
   getSavedConversationsController,
 } from '../controllers/conversation.controller';
 import { requireAuth } from '../../auth/middlewares/auth.middleware';
+import { memoryRouter } from '../../memory/memory.routes';
 
 export const conversationRouter = Router();
 
@@ -22,10 +22,11 @@ conversationRouter.post('/conversations/:id/voice-ticket', requireAuth as any, i
 conversationRouter.get('/conversations/:id', requireAuth as any, getConversationController as any);
 conversationRouter.delete('/conversations/:id', requireAuth as any, deleteConversationController as any);
 
-conversationRouter.get('/users/me/profile', requireAuth as any, getUserProfileController as any);
 conversationRouter.get('/users/me/summaries', requireAuth as any, getUserSummariesController as any);
 conversationRouter.get('/users/me/conversations', requireAuth as any, getSavedConversationsController as any);
 
 conversationRouter.post('/audio/transcribe', requireAuth as any, (_req, res) => {
   res.status(410).json({ error: 'Recorded-file transcription is disabled. Use the realtime voice session.' });
 });
+
+conversationRouter.use('/memory', requireAuth as any, memoryRouter);

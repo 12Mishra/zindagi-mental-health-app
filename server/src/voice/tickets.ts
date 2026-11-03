@@ -37,5 +37,7 @@ export async function consumeVoiceTicket(ticket: string) {
   return {
     userId: record.userId, conversationId: record.conversationId,
     sessionId: record.sessionId, transcriptConsent: record.conversation.transcriptConsent,
+    memoryConsent: record.conversation.memoryConsent,
+    moodBefore: record.conversation.moodBefore, moodNote: record.conversation.moodNote,
   };
 }
