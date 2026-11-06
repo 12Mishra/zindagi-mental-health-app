@@ -57,6 +57,9 @@ export const config = {
   otpCode: process.env.AUTH_OTP_CODE ?? '1234',
   otpTtlMinutes: Number(process.env.AUTH_OTP_TTL_MINUTES ?? 10),
   sessionTtlDays: Number(process.env.AUTH_SESSION_TTL_DAYS ?? 30),
+  staffSessionTtlHours: positiveInteger('STAFF_SESSION_TTL_HOURS', 12),
+  // Origins of the admin and therapist portals (server-side calls send no Origin; this is for browser clients only).
+  portalOrigins: (process.env.PORTAL_ORIGINS ?? 'http://localhost:3100,http://localhost:3200').split(',').map(x => x.trim()).filter(Boolean),
   ollamaUrl: process.env.OLLAMA_URL ?? 'http://localhost:11434',
   ollamaModel: process.env.OLLAMA_MODEL ?? '',
   voicePort: positiveInteger('VOICE_PORT', 4001),

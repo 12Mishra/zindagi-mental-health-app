@@ -11,6 +11,9 @@ The Expo app supports browser and Android development-build voice sessions. The 
 - [Local setup and demo runbook](docs/demo-runbook.md)
 - [Model and data preparation](training/README.md)
 
+Therapist portal (UI prototype, mock data): `cd therapist && npm install && npm run dev`.
+It serves http://localhost:3200 and does not call `server/` yet.
+
 Start on branch `codex/lisa-bilingual-realtime` from baseline `c8322ec`. Use a new isolated PostgreSQL database and the placeholder `.env.example` files. Do not run a schema reset against an existing database. Browser and Android live checks require approved provider credentials/quota; Android additionally requires a development build and a physical speaker/microphone test.
 
 Quick static checks:
@@ -28,3 +31,7 @@ python -m unittest discover -s training -p 'test_*.py' -v
 ```
 
 The setup commands, concurrency settings, and failure behavior are in the runbook. The source synthetic dataset is not committed into the new pipeline; prepared output belongs in `training/prepared/`, which is Git ignored.
+
+## Admin portal (UI only, mock data)
+
+`admin/` is the Next.js admin portal. Run `cd admin && npm install && npm run dev`; it serves http://localhost:3100 (add `?suppressed=1` to preview hidden small-cohort cards).

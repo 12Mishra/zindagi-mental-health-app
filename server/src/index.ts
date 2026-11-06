@@ -10,7 +10,7 @@ const app = express();
 
 app.use((req, res, next) => {
   const origin = req.header('origin');
-  if (origin && config.voiceAllowedOrigins.includes(origin)) res.header('Access-Control-Allow-Origin', origin);
+  if (origin && (config.voiceAllowedOrigins.includes(origin) || config.portalOrigins.includes(origin))) res.header('Access-Control-Allow-Origin', origin);
   res.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -37,6 +37,9 @@ app.use('/auth', authRouter);
 
 import { conversationRouter } from './conversation/routes/conversation.routes';
 app.use('/api', conversationRouter);
+
+import { staffRouter } from './staff/staff.routes';
+app.use('/staff', staffRouter);
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const message = error instanceof Error ? error.message : 'Unexpected server error.';
