@@ -47,6 +47,10 @@ const nonNegativeNumber = (key: string, fallback = 0) => {
   return value;
 };
 
+const contextBaseUrl = process.env.CONTEXT_LLM_BASE_URL || (process.env.CONTEXT_SAVING_LLM_GROQ ? 'https://api.groq.com/openai/v1' : '');
+const contextApiKey = process.env.CONTEXT_LLM_API_KEY || process.env.CONTEXT_SAVING_LLM_GROQ || '';
+const contextModel = process.env.CONTEXT_LLM_MODEL || (process.env.CONTEXT_SAVING_LLM_GROQ ? 'qwen/qwen3.8-27b' : '');
+
 export const config = {
   databaseUrl: requiredEnv('DATABASE_URL'),
   port: Number(process.env.PORT ?? 4000),
@@ -76,22 +80,24 @@ export const config = {
   voiceTriageGateMs: nonNegativeInteger('VOICE_TRIAGE_GATE_MS', 350),
   voiceOutputReview: oneOf('VOICE_OUTPUT_REVIEW', ['async', 'off'] as const, 'async'),
   ttsTransport: oneOf('TTS_TRANSPORT', ['ws', 'http'] as const, 'ws'),
-  ttsSpeaker: (process.env.TTS_SPEAKER || 'shubh').trim(),
+  ttsSpeaker: (process.env.TTS_SPEAKER || 'priya').trim(),
   sttEndpointingMs: positiveInteger('STT_ENDPOINTING_MS', 300),
   bargeInMinWords: positiveInteger('BARGE_IN_MIN_WORDS', 2),
   summaryConcurrency: positiveInteger('SUMMARY_CONCURRENCY', 1),
   summaryPollMs: positiveInteger('SUMMARY_POLL_MS', 2000),
-  summaryLlmBaseUrl: process.env.SUMMARY_LLM_BASE_URL ?? '',
-  summaryLlmApiKey: process.env.SUMMARY_LLM_API_KEY ?? '',
-  summaryLlmModel: process.env.SUMMARY_LLM_MODEL ?? '',
+  // Durable summaries and the memory-card merge: when SUMMARY_LLM_* is blank they reuse the context LLM (Groq) instead of local Ollama.
+  summaryLlmBaseUrl: process.env.SUMMARY_LLM_BASE_URL || contextBaseUrl,
+  summaryLlmApiKey: process.env.SUMMARY_LLM_BASE_URL ? process.env.SUMMARY_LLM_API_KEY ?? '' : contextApiKey,
+  // Groq rate limits are per model, so durable jobs use their own model and never starve the in-chat agent or the greeting.
+  summaryLlmModel: process.env.SUMMARY_LLM_MODEL || (process.env.CONTEXT_SAVING_LLM_GROQ && !process.env.CONTEXT_LLM_BASE_URL ? 'openai/gpt-oss-120b' : contextModel),
   redisUrl: process.env.REDIS_URL ?? '',
   workingTurns: positiveInteger('WORKING_TURNS', 8),
   promptTokenBudget: positiveInteger('PROMPT_TOKEN_BUDGET', 2000),
   sessionMemoryTtlS: positiveInteger('SESSION_MEMORY_TTL_S', 3600),
   // Context agent: empty model/key = disabled. The Groq key may come from CONTEXT_SAVING_LLM_GROQ.
-  contextLlmBaseUrl: process.env.CONTEXT_LLM_BASE_URL || (process.env.CONTEXT_SAVING_LLM_GROQ ? 'https://api.groq.com/openai/v1' : ''),
-  contextLlmApiKey: process.env.CONTEXT_LLM_API_KEY || process.env.CONTEXT_SAVING_LLM_GROQ || '',
-  contextLlmModel: process.env.CONTEXT_LLM_MODEL || (process.env.CONTEXT_SAVING_LLM_GROQ ? 'qwen/qwen3.8-27b' : ''),
+  contextLlmBaseUrl: contextBaseUrl,
+  contextLlmApiKey: contextApiKey,
+  contextLlmModel: contextModel,
   contextLlmTimeoutMs: positiveInteger('CONTEXT_LLM_TIMEOUT_MS', 3000),
   contextRecallMinScore: nonNegativeNumber('CONTEXT_RECALL_MIN_SCORE', 0.75),
   embeddingBaseUrl: process.env.EMBEDDING_BASE_URL ?? '',

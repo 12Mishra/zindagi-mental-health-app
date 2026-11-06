@@ -25,6 +25,7 @@ test('TTS language is chosen per turn: Devanagari or Roman Hindi is hi, plain En
   assert.equal(turnLanguage('मुझे नींद नहीं आ रही'), 'hi');
   assert.equal(turnLanguage('mujhe exams ka stress hai'), 'hi');
   assert.equal(turnLanguage('I feel stressed about my exams and tension at home'), 'en');
+  assert.equal(turnLanguage('I cannot do this anymore yaar'), 'en', 'one stray Hindi word stays English');
   for (const text of [URGENT_SUPPORT.en, URGENT_SUPPORT.hi]) {
     assert.match(text, /14416/);
     assert.match(text, /112/);

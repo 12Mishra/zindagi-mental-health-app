@@ -13,7 +13,15 @@ test('short backchannels during playback do not interrupt', () => {
   detector.arm();
   for (const text of ['hmm', 'haan', 'ok', 'accha', 'haan haan', 'ok accha', 'हाँ', 'yeah'])
     assert.equal(detector.partial(text), false, text);
-  assert.equal(detector.partial('wait'), false);
+  assert.equal(detector.partial('so'), false, 'one ordinary word is not enough');
+});
+
+test('a single stop command interrupts at once', () => {
+  for (const text of ['wait', 'stop', 'ruko', 'रुको']) {
+    const detector = new BargeInDetector(2);
+    detector.arm();
+    assert.equal(detector.partial(text), true, text);
+  }
 });
 
 test('two or more new words interrupt once', () => {

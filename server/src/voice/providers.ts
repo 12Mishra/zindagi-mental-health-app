@@ -58,6 +58,8 @@ export class DeepgramStream {
     if (finalText) this.callbacks.final(finalText);
   }
 
+  get open() { return this.socket?.readyState === WebSocket.OPEN; }
+
   send(frame: Buffer) {
     const socket = this.socket;
     if (!socket || socket.readyState !== WebSocket.OPEN) return false;

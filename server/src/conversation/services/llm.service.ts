@@ -58,13 +58,24 @@ async function summaryJson(messages: ChatMessage[], maxTokens: number): Promise<
     const url = new URL('chat/completions', config.summaryLlmBaseUrl.endsWith('/')
       ? config.summaryLlmBaseUrl : `${config.summaryLlmBaseUrl}/`);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30_000);
+    const timer = setTimeout(() => controller.abort(), 60_000);
+    // gpt-oss models reason before answering; keep that short and leave room for the JSON itself.
+    const reasoning = /gpt-oss/.test(config.summaryLlmModel);
+    const body = JSON.stringify({ model: config.summaryLlmModel, messages, stream: false, temperature: 0.1,
+      max_tokens: reasoning ? maxTokens + 1200 : maxTokens, response_format: { type: 'json_object' }, ...(reasoning ? { reasoning_effort: 'low' } : {}) });
     try {
-      const response = await fetch(url, {
+      const send = () => fetch(url, {
         method: 'POST', signal: controller.signal,
         headers: { 'Content-Type': 'application/json', ...(config.summaryLlmApiKey ? { Authorization: `Bearer ${config.summaryLlmApiKey}` } : {}) },
-        body: JSON.stringify({ model: config.summaryLlmModel, messages, stream: false, temperature: 0.1, max_tokens: maxTokens }),
+        body,
       });
+      let response = await send();
+      // Rate limited (e.g. Groq tokens per minute): wait as long as the provider asks, once.
+      if (response.status === 429) {
+        const wait = Math.min(25, Math.max(2, Number(response.headers.get('retry-after')) || 10));
+        await new Promise(resolve => setTimeout(resolve, wait * 1000));
+        response = await send();
+      }
       if (!response.ok) throw new Error(`Summary provider returned HTTP ${response.status}`);
       const data = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
       const content = data.choices?.[0]?.message?.content;

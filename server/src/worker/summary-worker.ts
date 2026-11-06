@@ -9,7 +9,7 @@ import { jobSource, riskRows, snapshotText, type JobPayload } from './memory-job
 import { POLICY_VERSION } from '../voice/policy';
 
 const LEASE_MS = 60_000;
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 5;
 const MERGE_ATTEMPTS = 3;
 
 async function claimJob(owner: string) {
@@ -127,12 +127,14 @@ async function processJob(owner: string) {
   } catch (error) {
     const code = error instanceof Error && /^(conversation_not_available|summary_invalid_evidence|memory_merge_invalid|memory_version_conflict)$/.test(error.message)
       ? error.message : 'generation_or_validation_failed';
+    // Error message only (provider status, validation code); never conversation text.
+    console.warn(`[worker] job ${job.id} attempt ${job.attempts} failed: ${error instanceof Error ? error.message.slice(0, 200) : 'unknown'}`);
     const failed = job.attempts >= MAX_ATTEMPTS;
     await prisma.summaryJob.updateMany({
       where: { id: job.id, leaseOwner: owner, state: 'RUNNING' },
       data: {
         state: failed ? 'FAILED' : 'PENDING', leaseOwner: null, leaseUntil: null,
-        nextAttemptAt: new Date(Date.now() + Math.min(60_000, 2000 * 2 ** job.attempts)),
+        nextAttemptAt: new Date(Date.now() + Math.min(120_000, 5000 * 2 ** job.attempts)),
         lastErrorCode: code,
       },
     });
