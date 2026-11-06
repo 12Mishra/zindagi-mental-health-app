@@ -54,7 +54,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          href: null,
+          title: "Dashboard",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="dashboard" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen

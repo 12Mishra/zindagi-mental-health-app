@@ -5,6 +5,7 @@ import { prisma } from '../../db';
 import type { RegistrationInput } from '../validators/auth.validator';
 import { createSessionToken, hashValue, safeCompare } from '../utils/crypto.util';
 import { createOtpCode } from '../utils/otp.util';
+import { linkUserToInstitution } from '../../insights/pseudonym';
 
 const addMinutes = (date: Date, minutes: number) =>
   new Date(date.getTime() + minutes * 60 * 1000);
@@ -123,6 +124,9 @@ export const register = async (input: RegistrationInput, req: Request) => {
     },
     select: publicUserSelect,
   });
+
+  // Attach new students to their institution (matched by college name) and give them a staff-facing pseudonym.
+  if (!existingUser) await linkUserToInstitution(user.id).catch(() => console.warn('[auth] institution_link_failed'));
 
   const session = await createSession(user.id, req);
   return { user, session, wasRegistered: !existingUser };

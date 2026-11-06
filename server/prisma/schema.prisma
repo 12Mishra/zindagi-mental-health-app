@@ -30,6 +30,18 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // P3 portals: tenant, cohort attributes and the pseudonym shown to staff instead of identity.
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  yearOfStudy   Int?
+  department    String?
+  pseudonym     String?      @unique
+  checkinOptIn  Boolean      @default(false)
+
+  checkins     MoodCheckin[]
+  appointments Appointment[]
+  outreach     Outreach[]
+
   otpRequests     OtpRequest[]
   sessions        Session[]
   conversations   Conversation[]
@@ -40,6 +52,7 @@ model User {
   observations    ProfileObservation[]
 
   @@index([phoneNumber])
+  @@index([institutionId])
 }
 
 model OtpRequest {
@@ -97,6 +110,7 @@ model Conversation {
   transcriptConsent Boolean              @default(false)
   memoryConsent     Boolean              @default(false)
   languageHint      String?
+  topics            Topic[]              @default([])
   retentionUntil    DateTime?
   nextTurnNumber    Int                  @default(1)
   messages          Message[]
@@ -238,9 +252,9 @@ enum Kosha {
 }
 
 model ProfileObservation {
-  id             String       @id @default(uuid())
+  id             String        @id @default(uuid())
   userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversationId String?
   conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   kosha          Kosha
@@ -248,7 +262,7 @@ model ProfileObservation {
   evidenceTurnId String
   policyVersion  String
   supersededAt   DateTime?
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime      @default(now())
 
   @@index([userId, kosha, createdAt])
 }
@@ -307,4 +321,279 @@ model RiskHistory {
   createdAt      DateTime      @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ───────────────────────── P3: admin and therapist portals ─────────────────────────
+
+enum Topic {
+  ACADEMIC
+  ANXIETY
+  RELATIONSHIPS
+  FINANCIAL
+  FAMILY
+  SLEEP
+  CAREER
+  HEALTH
+  OTHER
+}
+
+model Institution {
+  id            String   @id @default(uuid())
+  name          String
+  slug          String   @unique
+  kAnonymity    Int      @default(10)
+  pseudonymSalt String
+  createdAt     DateTime @default(now())
+
+  users  User[]
+  staff  StaffUser[]
+  stats  CohortDailyStat[]
+  alerts Alert[]
+}
+
+enum StaffRole {
+  ADMIN
+  THERAPIST
+}
+
+model StaffUser {
+  id            String      @id @default(uuid())
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  email         String      @unique
+  passwordHash  String
+  role          StaffRole
+  displayName   String
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+
+  sessions     StaffSession[]
+  profile      TherapistProfile?
+  slots        AvailabilitySlot[]
+  appointments Appointment[]
+
+  @@index([institutionId, role])
+}
+
+model StaffSession {
+  id          String    @id @default(uuid())
+  staffUserId String
+  staff       StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([staffUserId])
+  @@index([expiresAt])
+}
+
+enum CheckinSource {
+  APP
+  WHATSAPP
+}
+
+model MoodCheckin {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score        Int // 1 (very low) .. 5 (very good)
+  tags         String[]      @default([])
+  note         String?
+  source       CheckinSource @default(APP)
+  severity     RiskLevel? // set by the worker's severity classifier when a note exists
+  classifiedAt DateTime?
+  createdAt    DateTime      @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// Precomputed aggregates; one row per (institution, day, cohort, metric). Holds no personal data.
+model CohortDailyStat {
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  day           DateTime    @db.Date
+  cohortKey     String // all | year:N | dept:CODE
+  metric        String
+  value         Float
+  n             Int
+  updatedAt     DateTime    @updatedAt
+
+  @@id([institutionId, day, cohortKey, metric])
+  @@index([institutionId, cohortKey, metric, day])
+}
+
+enum AlertKind {
+  RISK
+  DISENGAGEMENT
+  COHORT_DIP
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AlertStatus {
+  NEW
+  ACK
+  RESOLVED
+}
+
+model Alert {
+  id               String        @id @default(uuid())
+  institutionId    String
+  institution      Institution   @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  kind             AlertKind
+  severity         AlertSeverity
+  status           AlertStatus   @default(NEW)
+  dedupeKey        String        @unique
+  subjectUserId    String? // internal only: never returned by the admin API
+  subjectPseudonym String?
+  cohortKey        String?
+  occurrences      Int           @default(1)
+  message          String
+  assigneeId       String?
+  firstSeenAt      DateTime      @default(now())
+  lastSeenAt       DateTime      @default(now())
+  resolvedAt       DateTime?
+
+  outreach Outreach[]
+
+  @@index([institutionId, status, lastSeenAt])
+}
+
+model Outreach {
+  id          String    @id @default(uuid())
+  alertId     String
+  alert       Alert     @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message     String
+  createdAt   DateTime  @default(now())
+  seenAt      DateTime?
+  dismissedAt DateTime?
+
+  @@index([userId, createdAt])
+}
+
+model TherapistProfile {
+  staffUserId String    @id
+  staff       StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  languages   String[]  @default([])
+  specialties Topic[]   @default([])
+  bio         String?
+}
+
+enum SlotStatus {
+  OPEN
+  BOOKED
+  REMOVED
+}
+
+enum SessionMode {
+  IN_PERSON
+  PHONE
+  VIDEO
+}
+
+model AvailabilitySlot {
+  id          String      @id @default(uuid())
+  therapistId String
+  therapist   StaffUser   @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  startsAt    DateTime
+  endsAt      DateTime
+  mode        SessionMode @default(IN_PERSON)
+  status      SlotStatus  @default(OPEN)
+
+  appointments Appointment[]
+
+  @@index([therapistId, startsAt])
+  @@index([status, startsAt])
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELLED_STUDENT
+  CANCELLED_THERAPIST
+}
+
+model Appointment {
+  id            String            @id @default(uuid())
+  slotId        String
+  slot          AvailabilitySlot  @relation(fields: [slotId], references: [id])
+  studentId     String
+  student       User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  therapistId   String
+  therapist     StaffUser         @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  institutionId String
+  status        AppointmentStatus @default(CONFIRMED)
+  sessionCode   String            @unique
+  reason        Topic?
+  alertId       String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  consents ConsentGrant[]
+  brief    CareBrief?
+  notes    TherapistNote[]
+
+  @@index([therapistId, status])
+  @@index([studentId, status])
+}
+
+enum ConsentScope {
+  BRIEF
+  IDENTITY
+  CONTACT
+}
+
+model ConsentGrant {
+  id            String       @id @default(uuid())
+  appointmentId String
+  appointment   Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  scope         ConsentScope
+  grantedAt     DateTime     @default(now())
+  revokedAt     DateTime?
+
+  @@unique([appointmentId, scope])
+}
+
+// Frozen snapshot of what the student agreed to share at booking time.
+model CareBrief {
+  appointmentId String      @id
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  content       Json
+  generator     String // llm | fallback
+  generatedAt   DateTime    @default(now())
+}
+
+model TherapistNote {
+  id            String      @id @default(uuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  authorId      String
+  ciphertext    String
+  iv            String
+  tag           String
+  createdAt     DateTime    @default(now())
+
+  @@index([appointmentId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actorRole  String
+  action     String
+  targetType String
+  targetId   String
+  at         DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([actorId, at])
 }
