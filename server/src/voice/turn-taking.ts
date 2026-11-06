@@ -2,6 +2,9 @@
 const BACKCHANNEL = new Set(['hmm', 'hm', 'mm', 'mhm', 'uh', 'um', 'umm', 'haan', 'han', 'ha', 'haa', 'ok', 'okay',
   'accha', 'acha', 'achha', 'ji', 'yeah', 'yes', 'right', 'theek', 'thik', 'हाँ', 'हां', 'अच्छा', 'ठीक', 'जी', 'हम्म']);
 
+// A single clear command cuts Lisa off at once, without waiting for a second word.
+const STOP_WORDS = new Set(['stop', 'wait', 'pause', 'ruko', 'ruk', 'रुको', 'रुकिए', 'ठहरो']);
+
 const meaningfulWords = (text: string) =>
   text.toLowerCase().split(/[\s,.!?।;:—-]+/u).filter(word => word && !BACKCHANNEL.has(word)).length;
 
@@ -20,7 +23,9 @@ export class BargeInDetector {
   speechStarted() { return false; }
 
   partial(text: string) {
-    if (!this.armed || meaningfulWords(text) < this.minWords) return false;
+    if (!this.armed) return false;
+    const stop = text.toLowerCase().split(/[\s,.!?।;:—-]+/u).some(word => STOP_WORDS.has(word));
+    if (!stop && meaningfulWords(text) < this.minWords) return false;
     this.armed = false;
     return true;
   }

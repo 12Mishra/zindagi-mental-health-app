@@ -8,7 +8,7 @@ Status: code implementation prepared, 2026-10-06; live integration remains unver
 - Start with one active voice session in development, test two and three concurrent active sessions, and run one summary job at a time. Limits are environment configuration, not capacity claims.
 - Listen continuously after explicit session start, stream microphone frames and provider results, support barge-in, and check each Lisa response segment before any text/audio is released.
 - Monitor stable student utterances live. Use separate triage, response review, acoustic features, and post-session summary paths.
-- Never persist raw or synthesized audio. Persist transcripts only with explicit consent. No paid services or automatic external alerts.
+- Never persist raw or synthesized audio. Persist transcripts only with explicit consent. No alert leaves Zindagi automatically: risk signals become pseudonymous alerts that a counsellor or admin reviews (see [system-flow.md](system-flow.md) §4).
 
 ## Verified starting point
 
@@ -64,6 +64,10 @@ Context agent jobs: (1) on a stable partial (>= 6 new words, >= 700 ms apart, on
 **Retention.** Conversation expiry deletes transcript data only; `MemorySummary`, `ProfileObservation` and `RiskHistory` keep their rows with `conversationId = null`.
 
 **Database.** The native PostgreSQL 17 `zindagi_voice_dev` has no `pgvector`. Embeddings are stored as `Float[]` and ranked in Node (`memory/vector.ts`, one user's rows only, `MEMORY_SEARCH_MAX_ROWS`). Upgrade path when a user's history outgrows that: Docker `pgvector/pgvector:pg17` on port 5433, or Supabase/Neon, swapping only `vector.ts` plus one migration. Groq has no embeddings endpoint, so recall stays off until `EMBEDDING_*` points at a multilingual embedding model.
+
+## Portals and aggregation (P3, planned)
+
+End-to-end data flow: [system-flow.md](system-flow.md). Implementation brief: [portals-plan.md](portals-plan.md). Core (`server/`) stays the only component with database access; the college admin portal (`admin/`) and therapist portal (`therapist/`) are separate Next.js apps that call core's `/staff`, `/admin` and `/therapist` APIs server-side. Admin analytics come from k-suppressed `CohortDailyStat` rollups computed by the worker; therapists see a pseudonym, session code and a consented care brief, and identity only with an explicit grant. The static dashboard in the mobile app is demo data and will be removed from the student app.
 
 ## Transport choice
 

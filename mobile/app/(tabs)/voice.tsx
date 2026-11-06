@@ -58,7 +58,7 @@ export default function VoiceScreen() {
         if (event.code === 'generation_failed' || event.code === 'response_blocked' || event.code === 'turn_internal_error')
           setState('listening');
         break;
-      case 'session_end': setState('ended'); setSummaryStatus(event.summaryStatus ?? 'none'); client.current = null; break;
+      case 'session_end': setState('ended'); setNotice(''); setSummaryStatus(event.summaryStatus ?? 'none'); client.current = null; break;
     }
   };
 
@@ -87,6 +87,14 @@ export default function VoiceScreen() {
     setNotice('Ending the session...');
     client.current?.end();
     if (!client.current) setState('ended');
+  };
+  // Tab screens stay mounted, so leaving the "ended" screen must clear it or the next visit still shows "Session ended".
+  const reset = () => {
+    client.current?.end(); client.current = null;
+    conversationId.current = null;
+    lineNumber.current = 0;
+    setState('idle'); setLines([]); setPartial(''); setNotice(''); setSummaryStatus('');
+    setMuted(false); setConfirmDelete(false); setDeleting(false);
   };
   const toggleMute = () => {
     const value = !muted;
@@ -140,10 +148,10 @@ export default function VoiceScreen() {
           summaryStatus === 'completed' ? 'Your summary is ready in Saved.' :
           summaryStatus === 'none' ? 'No transcript or summary was saved.' :
           'Summary status is unavailable. Check history later.'}</Text>
-        <TouchableOpacity style={styles.primary} onPress={() => router.replace('/mood-checkin')}>
+        <TouchableOpacity style={styles.primary} onPress={() => { reset(); router.replace('/mood-checkin'); }}>
           <Text style={styles.primaryText}>Done</Text>
         </TouchableOpacity>
-        {consent && <TouchableOpacity onPress={() => router.replace('/saved' as Href)}>
+        {consent && <TouchableOpacity onPress={() => { reset(); router.replace('/saved' as Href); }}>
           <Text style={styles.notice}>View saved sessions and summary status</Text>
         </TouchableOpacity>}
         {consent && conversationId.current && <TouchableOpacity style={styles.secondary} disabled={deleting}

@@ -47,6 +47,8 @@ class VoiceSession {
   readonly id = randomUUID();
   private auth: Auth | null = null;
   private stt: DeepgramStream | null = null;
+  private sttDropped = 0;
+  private audibleUntil = 0;
   private tts: TtsSession | null = null;
   private readonly bargeIn = new BargeInDetector(config.bargeInMinWords);
   private readonly reviews = new Limiter(2);
@@ -99,7 +101,9 @@ class VoiceSession {
       if (!this.auth || this.state === 'ending' || this.state === 'closed' || this.muted) return;
       if (frame.length < 2 || frame.length > 3200 || frame.length % 2) { this.fail('invalid_audio_frame', false); return; }
       this.acoustic?.add(frame);
-      if (!this.stt?.send(frame)) this.fail('audio_backpressure', false);
+      if (this.stt?.send(frame)) { this.sttDropped = 0; return; }
+      // A brief network stall toward the STT socket drops audio instead of ending the chat; a closed socket or a ~10 s stall is fatal.
+      if (!this.stt?.open || ++this.sttDropped > 100) this.fail('audio_backpressure', false);
       return;
     }
     let data: ClientEvent;
@@ -163,7 +167,11 @@ class VoiceSession {
 
   private currentState(): State { return this.state; }
 
-  private get speaking() { return this.state === 'generating' || this.state === 'playing'; }
+  /** TTS runs faster than real time, so audio can still be queued in the client after generation is done; that still counts as Lisa speaking. */
+  private get speaking() { return this.state === 'generating' || this.state === 'playing' || Date.now() < this.audibleUntil; }
+
+  /** Estimates when the client finishes playing everything sent so far (24 kHz, 16-bit mono = 48 bytes/ms). */
+  private noteAudio(bytes: number) { this.audibleUntil = Math.max(Date.now(), this.audibleUntil) + bytes / 48; }
 
   private onPartial(text: string) {
     this.event('transcript_partial', { text });
@@ -220,11 +228,13 @@ class VoiceSession {
 
   /** The single cancellation path (barge-in, client interrupt, new turn): abort LLM/triage/TTS and drop late events. */
   private cancelGeneration() {
+    const wasSpeaking = this.speaking;
     this.abort?.abort();
     this.abort = null;
     this.generation++;
     this.bargeIn.disarm();
-    if (this.speaking) {
+    this.audibleUntil = 0;
+    if (wasSpeaking) {
       this.tts?.cancel();
       this.state = 'interrupted';
       this.event('interrupted');
@@ -270,6 +280,7 @@ class VoiceSession {
         if (this.socket.readyState !== WebSocket.OPEN) return;
         if (this.socket.bufferedAmount > 64 * 1024) throw new Error('playback_backpressure');
         this.socket.send(pcm, { binary: true });
+        this.noteAudio(pcm.length);
       },
       isCurrent: current,
       playing: () => { if (current()) this.state = 'playing'; },
@@ -390,13 +401,15 @@ class VoiceSession {
         if (this.socket.readyState !== WebSocket.OPEN) return;
         if (this.socket.bufferedAmount > 64 * 1024) throw new Error('playback_backpressure');
         this.socket.send(pcm, { binary: true });
+        this.noteAudio(pcm.length);
       },
       end: segmentIndex => { if (current()) this.event('audio_end', { ...ids, segmentIndex }); },
     }, signal);
     pipeline.push(text, 0);
     try { await pipeline.finish(); } catch { /* greeting is best effort */ }
     const after = this.currentState();
-    if (current() && after !== 'ending' && after !== 'closed') { this.state = 'listening'; this.bargeIn.disarm(); }
+    // Barge-in stays armed while the greeting is still audible in the client.
+    if (current() && after !== 'ending' && after !== 'closed') { this.state = 'listening'; if (!this.speaking) this.bargeIn.disarm(); }
   }
 
   private checkLifetime() {

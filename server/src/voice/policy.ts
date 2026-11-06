@@ -45,7 +45,7 @@ export function reviewLisaSegment(text: string, triage: Triage): Review {
 export type TurnLanguage = 'en' | 'hi';
 export type PolicyText = Record<TurnLanguage, string>;
 
-// Common Roman-script Hindi words (extends ROMAN_HINDI in training/prepare_dialogue.py). One hit marks the turn Hinglish.
+// Common Roman-script Hindi words (extends ROMAN_HINDI in training/prepare_dialogue.py). Two distinct hits mark the turn Hinglish; English is the default.
 const ROMAN_HINDI = new Set(['nahi', 'nahin', 'kya', 'kyun', 'kyu', 'mujhe', 'mujhko', 'mera', 'meri', 'mere', 'hai', 'hain',
   'hoon', 'hu', 'tha', 'thi', 'yaar', 'samajh', 'kaise', 'kaisa', 'kuch', 'bahut', 'bohot', 'accha', 'acha', 'theek', 'thik',
   'lagta', 'lagti', 'raha', 'rahi', 'rahe', 'kar', 'karna', 'karta', 'karti', 'ghar', 'padhai', 'dost', 'mann', 'dimaag',
@@ -54,7 +54,7 @@ const ROMAN_HINDI = new Set(['nahi', 'nahin', 'kya', 'kyun', 'kyu', 'mujhe', 'mu
 /** Decide the voice language once per student turn so the accent never flips between clauses. */
 export function turnLanguage(text: string): TurnLanguage {
   if (/[ऀ-ॿ]/u.test(text)) return 'hi';
-  return text.toLowerCase().split(/[^a-z]+/).some(word => ROMAN_HINDI.has(word)) ? 'hi' : 'en';
+  return new Set(text.toLowerCase().split(/[^a-z]+/).filter(word => ROMAN_HINDI.has(word))).size >= 2 ? 'hi' : 'en';
 }
 
 // TODO(counsellor): the team's counsellor must approve the exact wording of these fixed messages before any pilot.
