@@ -45,3 +45,6 @@ app-example
 
 .claude/
 
+
+# env templates stay local
+.env.example
