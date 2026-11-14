@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zindagi admin portal
 
-## Getting Started
-
-First, run the development server:
+Next.js 15 (App Router) app for college administrators. It has no database: every number comes from the core API (`server/`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3100
+npm run build && npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Core must be running (`cd ../server && npm run dev`) with its worker (`npm run worker`), and seeded for demos (`SEED_STAFF_PASSWORD=... npm run seed:portals`). Sign in as `admin@tiet.test`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Default | Purpose |
+|---|---|---|
+| `CORE_API_URL` | `http://localhost:4000` | Base URL of core. Called only from the server side of this app. |
 
-## Learn More
+## How it talks to core
 
-To learn more about Next.js, take a look at the following resources:
+| Piece | File | Core endpoint |
+|---|---|---|
+| Sign in / out | `lib/actions.ts` | `POST /staff/login` (portal `admin`), `POST /staff/logout` |
+| Session | `lib/session.ts`, `middleware.ts` | token kept in the httpOnly cookie `zs_staff`; no cookie means redirect to `/login` |
+| Dashboard | `lib/data.ts` `getOverview` | `GET /admin/overview?cohort=` |
+| Alerts, counsellors | `lib/data.ts` `getAlerts` | `GET /admin/alerts`, `GET /admin/therapists` |
+| Acknowledge, resolve, assign | `lib/actions.ts` `updateAlert` | `PATCH /admin/alerts/:id` |
+| Outreach | `lib/actions.ts` `sendOutreach` | `POST /admin/alerts/:id/outreach` |
+| Live alerts | `app/api/alerts/stream/route.ts` | `GET /admin/alerts/stream` (server-sent events, proxied so the token never reaches the browser) |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+All calls go through `lib/core.ts` (`coreJson`), which attaches the token, turns a 401 into a redirect to `/login?expired=1`, and throws `CoreError` for other failures. The browser never holds the token and never calls core directly.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Numbers that fewer than the institution's k students stand behind arrive as `null` or `[]`/`null` cards and are shown as "Hidden: fewer than 10 students". Cohort groups below k are refused by core with 422.

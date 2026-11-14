@@ -60,6 +60,16 @@ export const config = {
   staffSessionTtlHours: positiveInteger('STAFF_SESSION_TTL_HOURS', 12),
   // Origins of the admin and therapist portals (server-side calls send no Origin; this is for browser clients only).
   portalOrigins: (process.env.PORTAL_ORIGINS ?? 'http://localhost:3100,http://localhost:3200').split(',').map(x => x.trim()).filter(Boolean),
+  // Batch insights LLM (check-in severity). Defaults to the Groq key already used by the context agent.
+  insightsLlmBaseUrl: process.env.INSIGHTS_LLM_BASE_URL || (process.env.CONTEXT_SAVING_LLM_GROQ ? 'https://api.groq.com/openai/v1' : ''),
+  insightsLlmApiKey: process.env.INSIGHTS_LLM_API_KEY || process.env.CONTEXT_SAVING_LLM_GROQ || '',
+  insightsLlmModel: process.env.INSIGHTS_LLM_MODEL || 'openai/gpt-oss-20b',
+  insightsLlmTimeoutMs: positiveInteger('INSIGHTS_LLM_TIMEOUT_MS', 20000),
+  // Aggregation: day boundaries are computed in this timezone so "today" matches the students' day.
+  rollupTimezone: process.env.ROLLUP_TIMEZONE || 'Asia/Kolkata',
+  rollupIntervalMs: positiveInteger('ROLLUP_INTERVAL_MS', 900_000),
+  alertIntervalMs: positiveInteger('ALERT_INTERVAL_MS', 30_000),
+  severityPollMs: positiveInteger('SEVERITY_POLL_MS', 10_000),
   ollamaUrl: process.env.OLLAMA_URL ?? 'http://localhost:11434',
   ollamaModel: process.env.OLLAMA_MODEL ?? '',
   voicePort: positiveInteger('VOICE_PORT', 4001),

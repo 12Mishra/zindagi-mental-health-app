@@ -34,4 +34,4 @@ The setup commands, concurrency settings, and failure behavior are in the runboo
 
 ## Admin portal (UI only, mock data)
 
-`admin/` is the Next.js admin portal. Run `cd admin && npm install && npm run dev`; it serves http://localhost:3100 (add `?suppressed=1` to preview hidden small-cohort cards).
+`admin/` is the Next.js admin portal for college administrators. Run `cd admin && npm install && npm run dev`; it serves http://localhost:3100 and reads live data from core (`CORE_API_URL`, default http://localhost:4000). Start core (`cd server && npm run dev`) and its worker (`npm run worker`) first, seed demo data with `SEED_STAFF_PASSWORD=... npm run seed:portals`, then sign in as `admin@tiet.test`. Small groups are hidden by core (k-anonymity), so sparse data shows "Hidden: fewer than 10 students".

@@ -5,6 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpaci
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ZColors } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
+import { getTodayMood } from '@/lib/daily-mood';
 import { deleteConversation, endConversation, issueVoiceTicket, startConversation } from '@/lib/conversation-api';
 import { createVoiceClient } from '@/lib/voice-client';
 import type { VoiceClient, VoiceEvent } from '@/lib/voice-client-types';
@@ -68,7 +69,10 @@ export default function VoiceScreen() {
     setState('connecting'); setNotice('Requesting microphone access and connecting...');
     setSummaryStatus('');
     try {
-      const created = await startConversation(token, params.moods?.split(',') ?? [], params.note, consent, memoryConsent);
+      // Every conversation carries today's mood, whether or not the student just passed through the check-in screen.
+      const today = getTodayMood(getAuthSession()?.user.id);
+      const moods = today?.moods ?? params.moods?.split(',').filter(Boolean) ?? [];
+      const created = await startConversation(token, moods, today?.note || params.note, consent, memoryConsent);
       conversationId.current = created.id;
       const { ticket } = await issueVoiceTicket(token, created.id);
       const voice = createVoiceClient({ onEvent: onVoiceEvent, onError: message => setNotice(message) });

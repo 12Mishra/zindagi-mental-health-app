@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ZColors, ZRadius, ZShadow } from "@/constants/zindagi-theme";
 import { logout } from "@/lib/auth-api";
 import { clearAuthSession, getAuthSession } from "@/lib/auth-session";
+import { getTodayMood, saveTodayMood } from "@/lib/daily-mood";
 
 // ── Mood data ─────────────────────────────────────────────────────────────────
 
@@ -126,10 +127,18 @@ export default function MoodCheckinScreen() {
     });
   };
 
+  // Already checked in today: skip the question. Runs on every focus so a tab left open past midnight asks again.
+  useFocusEffect(
+    useCallback(() => {
+      if (getTodayMood(getAuthSession()?.user.id)) router.replace("/voice");
+    }, []),
+  );
+
   const canContinue = selected.size > 0;
 
   const handleContinue = () => {
     if (!canContinue) return;
+    saveTodayMood(getAuthSession()?.user.id, Array.from(selected), noteText);
     router.push({
       pathname: '/voice',
       params: {

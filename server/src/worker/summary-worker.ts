@@ -7,6 +7,7 @@ import { loadLongTerm, parseMerge, prismaMemoryStore } from '../memory/long-term
 import { embed } from '../memory/vector';
 import { jobSource, riskRows, snapshotText, type JobPayload } from './memory-job';
 import { POLICY_VERSION } from '../voice/policy';
+import { startInsightJobs } from './jobs';
 
 const LEASE_MS = 60_000;
 const MAX_ATTEMPTS = 5;
@@ -83,6 +84,7 @@ async function processJob(owner: string) {
             where: { id: job.conversationId, status: 'ENDED' }, select: { userId: true, createdAt: true, languageHint: true },
           });
           if (!currentJob || !currentConversation) return;
+          await tx.conversation.update({ where: { id: job.conversationId }, data: { topics: result.topics } });
           const userId = currentConversation.userId;
           if (source === 'transcript') {
             await tx.conversationSummary.upsert({
@@ -162,4 +164,5 @@ async function retentionLoop() {
 
 for (let i = 0; i < config.summaryConcurrency; i++) void loop(i);
 void retentionLoop();
+startInsightJobs();
 console.log(`Memory worker running with concurrency ${config.summaryConcurrency}`);

@@ -32,7 +32,7 @@ export default function LoginScreen() {
 
   const phoneDigits = phone.replace(/\D/g, '');
   const otpDigits = otp.replace(/\D/g, '');
-  const canSendOtp = phoneDigits.length >= 10;
+  const canSendOtp = phoneDigits.length === 10;
   const canContinue = otpSent && otpDigits.length >= 4;
 
   useEffect(() => {
@@ -146,9 +146,9 @@ export default function LoginScreen() {
               <Text style={s.countryCode}>+91</Text>
               <TextInput
                 value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                maxLength={12}
+                onChangeText={text => setPhone(text.replace(/\D/g, '').slice(0, 10))}
+                keyboardType="number-pad"
+                maxLength={10}
                 placeholder="98765 43210"
                 placeholderTextColor={ZColors.textMuted}
                 style={s.input}

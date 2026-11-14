@@ -1,16 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { signOut } from '@/lib/actions';
 
-export function TopBar() {
+export function TopBar({ name }: { name: string }) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  function signOut() {
-    document.cookie = 'zs_admin_mock=; path=/; max-age=0';
-    router.push('/login');
-  }
 
   const items = [
     { href: '/', label: 'Overview' },
@@ -29,8 +24,10 @@ export function TopBar() {
           ))}
         </nav>
         <div className="who">
-          <span>Signed in as Admin (demo)</span>
-          <button type="button" className="btn ghost sm" onClick={signOut}>Sign out</button>
+          <span>Signed in as {name}</span>
+          <form action={signOut}>
+            <button type="submit" className="btn ghost sm">Sign out</button>
+          </form>
         </div>
       </div>
     </header>

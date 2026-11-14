@@ -4,6 +4,7 @@ dotenv.config();
 import express, { type ErrorRequestHandler } from 'express';
 
 import { authRouter } from './auth/routes/auth.routes';
+import { requireAuth } from './auth/middlewares/auth.middleware';
 import { config } from './config';
 
 const app = express();
@@ -40,6 +41,18 @@ app.use('/api', conversationRouter);
 
 import { staffRouter } from './staff/staff.routes';
 app.use('/staff', staffRouter);
+
+import { adminRouter } from './admin/admin.routes';
+app.use('/admin', adminRouter);
+
+import { therapistRouter } from './booking/therapist.routes';
+app.use('/therapist', therapistRouter);
+
+import { studentBookingRouter } from './booking/student.routes';
+app.use('/api/booking', requireAuth as any, studentBookingRouter as any);
+
+import { checkinRouter } from './checkins/checkin.routes';
+app.use('/api/checkins', requireAuth as any, checkinRouter as any);
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const message = error instanceof Error ? error.message : 'Unexpected server error.';

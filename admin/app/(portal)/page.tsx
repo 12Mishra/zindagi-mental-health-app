@@ -1,19 +1,37 @@
+import { CoreError } from '@/lib/core';
 import { getOverview } from '@/lib/data';
 import { formatAsOf } from '@/lib/format';
 import { Icon } from '@/components/Icons';
 import { KpiCards } from '@/components/KpiCards';
 import { Heatmap } from '@/components/Heatmap';
 import { ProblemBars, YearDistribution } from '@/components/Charts';
+import { LiveRefresh } from '@/components/LiveRefresh';
 import { RecentAlerts } from '@/components/RecentAlerts';
 import { Empty, Suppressed } from '@/components/States';
+import type { Overview } from '@/lib/types';
 
-export default async function OverviewPage({ searchParams }: { searchParams: Promise<{ suppressed?: string; empty?: string }> }) {
+const COHORT = /^(all|year:[1-6]|dept:[A-Z0-9]{1,10})$/;
+
+export default async function OverviewPage({ searchParams }: { searchParams: Promise<{ cohort?: string }> }) {
   const sp = await searchParams;
-  const data = await getOverview({ suppressed: sp.suppressed === '1', empty: sp.empty === '1' });
+  const cohort = sp.cohort && COHORT.test(sp.cohort) ? sp.cohort : 'all';
+
+  let data: Overview;
+  try {
+    data = await getOverview(cohort);
+  } catch (error) {
+    // Core refuses cohorts with fewer than k students so small groups cannot be identified.
+    if (error instanceof CoreError && error.status === 422) {
+      return <div className="card"><Empty title="This group is too small to show" hint="Groups with fewer than the minimum number of students are hidden to protect privacy." /></div>;
+    }
+    throw error;
+  }
   const heatSuppressed = data.heatmap.length > 0 && data.heatmap.every((w) => w.every((v) => v === 0));
+  const active = data.institution.activeStudents;
 
   return (
     <>
+      <LiveRefresh />
       <div>
         <div className="header">
           <div>
@@ -25,7 +43,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
             <button type="button" className="bell" aria-label="Notifications"><Icon name="bell" size={22} /></button>
           </div>
         </div>
-        <p className="date-line">{formatAsOf(data.asOf)} · {data.institution.activeStudents} active students</p>
+        <p className="date-line">{formatAsOf(data.asOf)} · {active === null ? 'active students hidden' : `${active} active students`}</p>
       </div>
 
       <KpiCards kpis={data.kpis} />
