@@ -7,6 +7,7 @@ import { ZColors } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
 import { getTodayMood } from '@/lib/daily-mood';
 import { deleteConversation, endConversation, issueVoiceTicket, startConversation } from '@/lib/conversation-api';
+import { requestSupportPromptCheck } from '@/lib/support-prompt-store';
 import { createVoiceClient } from '@/lib/voice-client';
 import type { VoiceClient, VoiceEvent } from '@/lib/voice-client-types';
 
@@ -29,6 +30,13 @@ export default function VoiceScreen() {
   const conversationId = useRef<string | null>(null);
   const lineNumber = useRef(0);
   const scrollView = useRef<ScrollView>(null);
+  // A support prompt waits until Lisa has finished speaking (or a short fallback), then the root sheet fetches and shows it.
+  const promptArmed = useRef(false);
+  const promptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showPromptSoon = (ms: number) => {
+    if (promptTimer.current) clearTimeout(promptTimer.current);
+    promptTimer.current = setTimeout(() => { promptArmed.current = false; requestSupportPromptCheck(); }, ms);
+  };
 
   const addLine = (role: Line['role'], text: string) => {
     setLines(previous => [...previous, { id: String(++lineNumber.current), role, text }]);
@@ -46,7 +54,8 @@ export default function VoiceScreen() {
       case 'response_text': if (event.text) addLine('assistant', event.text);
         setState(event.serviceMessage ? 'listening' : 'responding'); setNotice(''); break;
       case 'audio_start': setState('responding'); setNotice('Lisa is speaking.'); break;
-      case 'audio_end': setState('listening'); setNotice(''); break;
+      case 'audio_end': setState('listening'); setNotice(''); if (promptArmed.current) showPromptSoon(800); break;
+      case 'support_prompt': promptArmed.current = true; showPromptSoon(5000); break;
       case 'interrupted': setState('speaking'); setNotice('Lisa stopped speaking so you can continue.'); break;
       case 'risk':
         // LOW verdicts can arrive after Lisa already started speaking, so they never change the UI state.
@@ -59,7 +68,7 @@ export default function VoiceScreen() {
         if (event.code === 'generation_failed' || event.code === 'response_blocked' || event.code === 'turn_internal_error')
           setState('listening');
         break;
-      case 'session_end': setState('ended'); setNotice(''); setSummaryStatus(event.summaryStatus ?? 'none'); client.current = null; break;
+      case 'session_end': if (promptTimer.current) clearTimeout(promptTimer.current); promptArmed.current = false; requestSupportPromptCheck(); setState('ended'); setNotice(''); setSummaryStatus(event.summaryStatus ?? 'none'); client.current = null; break;
     }
   };
 
@@ -119,13 +128,17 @@ export default function VoiceScreen() {
       setNotice(error instanceof Error ? error.message : 'Could not delete session data.');
     } finally { setDeleting(false); }
   };
-  useEffect(() => () => client.current?.end(), []);
+  useEffect(() => () => { client.current?.end(); if (promptTimer.current) clearTimeout(promptTimer.current); }, []);
   useEffect(() => scrollView.current?.scrollToEnd({ animated: true }), [lines, partial]);
 
   return <View style={styles.root}>
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>Lisa</Text>
+        <TouchableOpacity style={styles.trust} onPress={() => router.push('/trusted-contacts' as Href)} accessibilityLabel="People I trust">
+          <MaterialIcons name="favorite-border" size={16} color="#fff" />
+          <Text style={styles.trustText}>People I trust</Text>
+        </TouchableOpacity>
         <Text style={styles.badge}>{state === 'idle' ? 'Ready' : state}</Text>
       </View>
       {state === 'idle' ? <View style={styles.startArea}>
@@ -202,6 +215,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { color: '#fff', fontSize: 25, fontWeight: '700' },
+  trust: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: ZColors.darkCard, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
+  trustText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   badge: { color: '#fff', backgroundColor: ZColors.olive, overflow: 'hidden', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5, textTransform: 'capitalize' },
   startArea: { flex: 1, padding: 28, justifyContent: 'center', alignItems: 'center', gap: 16 },
   heading: { color: '#fff', fontSize: 26, fontWeight: '700', textAlign: 'center' },

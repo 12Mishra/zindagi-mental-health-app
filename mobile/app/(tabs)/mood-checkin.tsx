@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ZColors, ZRadius, ZShadow } from "@/constants/zindagi-theme";
 import { logout } from "@/lib/auth-api";
 import { clearAuthSession, getAuthSession } from "@/lib/auth-session";
-import { getTodayMood, saveTodayMood } from "@/lib/daily-mood";
+import { getTodayMood, saveTodayMood, type DailyMood } from "@/lib/daily-mood";
 
 // ── Mood data ─────────────────────────────────────────────────────────────────
 
@@ -127,10 +127,12 @@ export default function MoodCheckinScreen() {
     });
   };
 
-  // Already checked in today: skip the question. Runs on every focus so a tab left open past midnight asks again.
+  // Already checked in today: hide the question but keep the home screen reachable.
+  // Re-read on every focus so a tab left open past midnight asks again.
+  const [todayMood, setTodayMood] = useState<DailyMood | null>(() => getTodayMood(getAuthSession()?.user.id));
   useFocusEffect(
     useCallback(() => {
-      if (getTodayMood(getAuthSession()?.user.id)) router.replace("/voice");
+      setTodayMood(getTodayMood(getAuthSession()?.user.id));
     }, []),
   );
 
@@ -139,6 +141,9 @@ export default function MoodCheckinScreen() {
   const handleContinue = () => {
     if (!canContinue) return;
     saveTodayMood(getAuthSession()?.user.id, Array.from(selected), noteText);
+    setTodayMood(getTodayMood(getAuthSession()?.user.id));
+    setSelected(new Set());
+    setNoteText("");
     router.push({
       pathname: '/voice',
       params: {
@@ -205,6 +210,26 @@ export default function MoodCheckinScreen() {
           </View>
         ) : null}
 
+        {todayMood ? (
+          <>
+            <View style={s.promptCard}>
+              <Text style={s.promptTitle}>You've checked in today</Text>
+              <Text style={s.promptSub}>
+                Feeling: {todayMood.moods.map((id) => MOODS.find((m) => m.id === id)?.label ?? id).join(", ")}.
+                Lisa already knows, so there's nothing more to fill in.
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={s.continueBtn}
+              onPress={() => router.push("/voice")}
+            >
+              <Text style={s.continueBtnText}>Talk to Lisa</Text>
+              <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
         {/* ── Prompt ── */}
         <View style={s.promptCard}>
           <Text style={s.promptTitle}>How are you feeling right now?</Text>
@@ -295,6 +320,14 @@ export default function MoodCheckinScreen() {
         >
           <Text style={s.continueBtnText}>Continue</Text>
           <MaterialIcons name="arrow-forward" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+          </>
+        )}
+
+        {/* ── Trusted contacts ── */}
+        <TouchableOpacity style={s.crisisLink} onPress={() => router.push("/trusted-contacts" as any)}>
+          <MaterialIcons name="favorite-border" size={14} color={ZColors.olive} />
+          <Text style={[s.crisisLinkText, { color: ZColors.olive }]}>People I trust</Text>
         </TouchableOpacity>
 
         {/* ── Crisis Link ── */}

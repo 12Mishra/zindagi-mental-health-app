@@ -9,6 +9,7 @@ import { SessionContext } from '../memory/session-context';
 import { search } from '../memory/vector';
 import type { PromptResult } from '../memory/prompt-builder';
 import { endConversation } from '../conversation/services/conversation.service';
+import { maybeCreatePrompt } from '../contacts/prompts.service';
 import { consumeVoiceTicket } from './tickets';
 import { AcousticAnalyzer } from './acoustic';
 import { DeepgramStream, streamLisa, warmLisa } from './providers';
@@ -68,6 +69,9 @@ class VoiceSession {
   private lastActivity = Date.now();
   private output: TurnOutput | null = null;
   private lastTurnId = '';
+  /** Final-turn risk per turn id, for consent-first support prompts. The provisional partial never lands here. */
+  private readonly promptedTurns = new Set<string>();
+  private readonly elevatedTurns = new Set<string>();
   private startedAt = Date.now();
   private lastAuthCheck = Date.now();
   private checkingAuth = false;
@@ -267,6 +271,8 @@ class VoiceSession {
     const current = () => generation === this.generation;
     const messages = prompt.messages;
     const recent = messages.filter(message => message.role === 'user').slice(-3, -1).map(message => message.content);
+    // A regex URGENT on the FINAL transcript counts even if the LLM triage is cut short by a barge-in.
+    if (turn.regex.level === 'URGENT') void this.offerSupport(turnId, 'URGENT');
     const runner = new TurnRunner({
       streamLlm: (llmSignal, hooks) => streamLisa(messages, llmSignal, hooks),
       triage: triageSignal => assessStudentUtterance(text, triageSignal, recent),
@@ -284,7 +290,11 @@ class VoiceSession {
       },
       isCurrent: current,
       playing: () => { if (current()) this.state = 'playing'; },
-      triaged: triage => { this.ctx?.recordRisk(triage.level); this.persistRisk(auth, turnId, triage); },
+      triaged: triage => {
+        this.ctx?.recordRisk(triage.level); this.persistRisk(auth, turnId, triage);
+        if (triage.level === 'URGENT') void this.offerSupport(turnId, 'URGENT');
+        else if (triage.level === 'ELEVATED') this.elevatedTurns.add(turnId);
+      },
       reviewed: (segmentIndex, review) => this.persistReview(auth, output.id, segmentIndex, review),
     }, { language, regex: turn.regex, gateMs: config.voiceTriageGateMs, outputReview: config.voiceOutputReview, signal, trace });
     output.segments = runner.segments;
@@ -298,6 +308,20 @@ class VoiceSession {
       this.emitTurnMetrics(runner, trace, output.id, signal.aborted, prompt);
       await this.persistAssistant(auth, turn.commit, turnId, output, signal.aborted || runner.blocked);
     }
+  }
+
+  /**
+   * Creates the consent-first support prompt (never contacts anyone) and tells the client to show it once Lisa has finished.
+   * Only final-turn signals call this; an URGENT partial from onPartial deliberately does not.
+   */
+  private async offerSupport(turnId: string, level: 'URGENT' | 'ELEVATED', announce = true) {
+    const auth = this.auth;
+    if (!auth || (level === 'URGENT' && this.promptedTurns.has(turnId))) return;
+    if (level === 'URGENT') this.promptedTurns.add(turnId);
+    try {
+      const prompt = await maybeCreatePrompt(auth.userId, 'VOICE', level);
+      if (prompt && announce) this.event('support_prompt', { promptId: prompt.id, level: prompt.level });
+    } catch { console.warn(`[voice] ${this.id} support_prompt_failed`); }
   }
 
   private emitTurnMetrics(runner: TurnRunner, trace: TurnTrace, generationId: string, interrupted: boolean, prompt: BuiltPrompt) {
@@ -453,6 +477,8 @@ class VoiceSession {
       try { summaryStatus = (await endConversation(this.auth.conversationId, this.auth.userId, this.auth.memoryConsent ? snapshot : null)).summaryStatus; }
       catch { summaryStatus = 'error'; }
     }
+    // Two or more ELEVATED turns in one session: offer the prompt as the student leaves ("Before you go...").
+    if (this.auth && this.elevatedTurns.size >= 2) await this.offerSupport('session-end', 'ELEVATED', !disconnected);
     if (!disconnected) {
       const durationMinutes = Math.max(0, (Date.now() - this.startedAt) / 60_000);
       this.event('session_end', { summaryStatus, sttConnectionMinutesEstimate: Number(durationMinutes.toFixed(3)),

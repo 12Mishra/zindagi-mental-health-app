@@ -1,6 +1,7 @@
 import { prisma } from '../db';
 import { classifySeverity } from '../insights/severity';
 import { POLICY_VERSION } from '../voice/policy';
+import { maybeCreatePrompt } from '../contacts/prompts.service';
 
 const BATCH = 10;
 const GIVE_UP_MS = 24 * 3_600_000;
@@ -30,6 +31,10 @@ export async function classifyPendingCheckins(): Promise<number> {
         });
       }
     });
+    // Consent-first: this only offers the student a prompt; nothing is sent to anyone without their tap.
+    if (result.level === 'ELEVATED' || result.level === 'URGENT') {
+      await maybeCreatePrompt(row.userId, 'CHECKIN', result.level).catch(() => console.warn('[severity] prompt_create_failed'));
+    }
     done++;
   }
   return done;

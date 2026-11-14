@@ -51,6 +51,11 @@ model User {
   riskHistory     RiskHistory[]
   observations    ProfileObservation[]
 
+  // P4 trusted contacts: private to the student, never exposed to staff APIs.
+  trustedContacts      TrustedContact[]
+  supportPrompts       SupportPrompt[]
+  contactNotifications ContactNotification[]
+
   @@index([phoneNumber])
   @@index([institutionId])
 }
@@ -596,4 +601,99 @@ model AuditLog {
 
   @@index([targetType, targetId])
   @@index([actorId, at])
+}
+
+// ───────────────────────── P4: trusted contacts and consent-first support prompts ─────────────────────────
+
+enum ContactRelationship {
+  FRIEND
+  ROOMMATE
+  SIBLING
+  FAMILY
+  PARTNER
+  MENTOR
+  COUNSELLOR
+  OTHER
+}
+
+enum ContactChannel {
+  WHATSAPP
+  SMS
+}
+
+model TrustedContact {
+  id           String              @id @default(uuid())
+  userId       String
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nameCipher   String // seal() from booking/crypto.ts, key CONTACTS_ENCRYPTION_KEY
+  phoneCipher  String // E.164, sealed
+  phoneHash    String // HMAC of E.164, for duplicate checks without decrypting
+  relationship ContactRelationship
+  channel      ContactChannel      @default(WHATSAPP)
+  priority     Int // 1 = offered first; dense 1..n per user
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([userId, priority])
+  @@unique([userId, phoneHash])
+  @@index([userId])
+}
+
+enum PromptSource {
+  VOICE
+  CHECKIN
+}
+
+enum PromptStatus {
+  SHOWN
+  MESSAGED
+  CALLED
+  DECLINED
+  SNOOZED
+  EXPIRED
+}
+
+model SupportPrompt {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source      PromptSource
+  level       RiskLevel
+  status      PromptStatus @default(SHOWN)
+  createdAt   DateTime     @default(now())
+  expiresAt   DateTime
+  respondedAt DateTime?
+
+  notifications ContactNotification[]
+
+  @@index([userId, createdAt])
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+model ContactNotification {
+  id            String             @id @default(uuid())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptId      String
+  prompt        SupportPrompt      @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  contactId     String? // nulled when the contact is deleted
+  contactLabel  String // "Riya (friend)"; scrubbed to "a friend" on delete
+  channel       ContactChannel
+  body          String // exact text sent, shown to the student
+  status        NotificationStatus @default(QUEUED)
+  attempts      Int                @default(0)
+  nextAttemptAt DateTime           @default(now())
+  leaseUntil    DateTime?
+  providerId    String?
+  errorCode     String?
+  createdAt     DateTime           @default(now())
+  sentAt        DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([userId, createdAt])
 }

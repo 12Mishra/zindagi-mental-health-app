@@ -12,7 +12,7 @@ const app = express();
 app.use((req, res, next) => {
   const origin = req.header('origin');
   if (origin && (config.voiceAllowedOrigins.includes(origin) || config.portalOrigins.includes(origin))) res.header('Access-Control-Allow-Origin', origin);
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
@@ -53,6 +53,9 @@ app.use('/api/booking', requireAuth as any, studentBookingRouter as any);
 
 import { checkinRouter } from './checkins/checkin.routes';
 app.use('/api/checkins', requireAuth as any, checkinRouter as any);
+
+import { contactsRouter } from './contacts/contacts.routes';
+app.use('/api', contactsRouter);
 
 const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const message = error instanceof Error ? error.message : 'Unexpected server error.';

@@ -17,7 +17,7 @@
     "seed:portals": "tsc && node dist/scripts/seed-portals.js",
     "seed:admin": "tsc && node dist/scripts/seed-admin.js",
     "db:view":"ts-node src/scripts/view-tables.ts",
-    "test": "npm run build && node --test dist/voice/*.test.js dist/memory/*.test.js dist/staff/*.test.js dist/insights/*.test.js dist/booking/*.test.js"
+    "test": "npm run build && node --test dist/voice/*.test.js dist/memory/*.test.js dist/staff/*.test.js dist/insights/*.test.js dist/booking/*.test.js dist/contacts/*.test.js"
   },
   "keywords": [],
   "author": "",

@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { SupportPromptHost } from '@/components/support-prompt-sheet';
 import { ZColors } from '@/constants/zindagi-theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -25,9 +26,12 @@ export default function RootLayout() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="profile-details" options={{ headerShown: false }} />
         <Stack.Screen name="history" options={{ headerShown: false }} />
+        <Stack.Screen name="trusted-contacts" options={{ headerShown: false }} />
+        <Stack.Screen name="contact-log" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
+      <SupportPromptHost />
       <StatusBar style="auto" />
     </ThemeProvider>
   );

@@ -1,7 +1,7 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 type ApiRequestOptions = {
-  method?: 'GET' | 'POST' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: Record<string, unknown>;
   token?: string;
 };
@@ -15,7 +15,7 @@ export class ApiError extends Error {
   }
 }
 
-async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
   if (!API_URL) throw new ApiError('EXPO_PUBLIC_API_URL is not configured.', 0);
   let response: Response;
 

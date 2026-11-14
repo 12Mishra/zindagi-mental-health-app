@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import { maybeCreatePrompt } from '../contacts/prompts.service';
 
 export class CheckinError extends Error {
   constructor(message: string, readonly status: number) { super(message); }
@@ -29,10 +30,21 @@ export async function createCheckin(userId: string, input: CheckinInput) {
     throw new CheckinError('Check-in limit reached for today.', 429);
   }
   // Severity is classified later by the worker, never on the request path.
-  return prisma.moodCheckin.create({
+  const created = await prisma.moodCheckin.create({
     data: { userId, score: input.score, tags: input.tags, note: input.note, source: 'APP' },
     select: { id: true, score: true, tags: true, createdAt: true },
   });
+  await offerSupportAfterLowStreak(userId, input.score);
+  return created;
+}
+
+/** Three score-1 check-ins within 7 days: offer a softer, consent-first prompt (level LOW). Never blocks the check-in. */
+async function offerSupportAfterLowStreak(userId: string, score: number) {
+  if (score !== 1) return;
+  try {
+    const lows = await prisma.moodCheckin.count({ where: { userId, score: 1, createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) } } });
+    if (lows >= 3) await maybeCreatePrompt(userId, 'CHECKIN', 'LOW');
+  } catch { console.warn('[checkin] prompt_create_failed'); }
 }
 
 /** Own history only; the note and its severity are deliberately not echoed back. */

@@ -9,6 +9,7 @@ export type VoiceEvent = {
   generationId?: string;
   segmentIndex?: number;
   serviceMessage?: boolean;
+  promptId?: string;
 };
 
 export type VoiceClient = {
