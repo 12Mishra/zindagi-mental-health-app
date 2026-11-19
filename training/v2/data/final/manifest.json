@@ -1,0 +1,105 @@
+{
+  "runtime_prompt_sha_hint": "You are Lisa, an AI support companion for college students. ",
+  "conversations": {
+    "train": 1115,
+    "test": 123,
+    "validation": 90
+  },
+  "examples": {
+    "train": 4258,
+    "validation": 352,
+    "test": 468
+  },
+  "excluded_conversations": {
+    "judge_fail": 1261,
+    "judge_bad_replies_dropped": 772
+  },
+  "allow_unreviewed_crisis": true,
+  "conversations_without_llm_judge": 2,
+  "train_coverage": {
+    "scenario_type": {
+      "standard_support": 1909,
+      "memory_recall_present": 355,
+      "boundary_request": 324,
+      "positive_checkin": 308,
+      "memory_recall_absent": 286,
+      "crisis_uncertain": 229,
+      "exercise_declined": 229,
+      "memory_declined_exercise": 228,
+      "minimal_responses": 187,
+      "skeptical_or_hostile": 136,
+      "crisis_explicit": 67
+    },
+    "language": {
+      "english": 1505,
+      "bengali": 776,
+      "punjabi": 688,
+      "hinglish": 534,
+      "hindi": 388,
+      "switch": 338,
+      "punjabi_roman": 24,
+      "bengali_roman": 5
+    },
+    "kosha": {
+      "MANOMAYA": 1010,
+      "VIJNANAMAYA": 879,
+      "ANNAMAYA": 850,
+      "PRANAMAYA": 834,
+      "ANANDAMAYA": 685
+    },
+    "risk": {
+      "none": 3962,
+      "uncertain": 229,
+      "explicit": 67
+    }
+  },
+  "train_with_memory_pct": 51.7,
+  "reply_words": {
+    "median": 22,
+    "p90": 30,
+    "max": 45
+  },
+  "reply_question_pct": 60.2,
+  "top_openers": [
+    [
+      "ਤੁਸੀਂ ਆਪਣੇ",
+      115
+    ],
+    [
+      "You’re feeling",
+      63
+    ],
+    [
+      "Aapko lag",
+      43
+    ],
+    [
+      "you’re noticing",
+      40
+    ],
+    [
+      "you’re feeling",
+      38
+    ],
+    [
+      "You’re noticing",
+      30
+    ],
+    [
+      "I can’t",
+      28
+    ],
+    [
+      "ਤੁਸੀਂ ਆਪਣੀ",
+      28
+    ],
+    [
+      "I don’t",
+      27
+    ],
+    [
+      "আপনি যে",
+      27
+    ]
+  ]
+}

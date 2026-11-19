@@ -1,0 +1,11 @@
+# Training env. Gemma 4 needs transformers >= 5.5. Unsloth pulls a matching torch build.
+unsloth>=2026.11
+unsloth_zoo
+transformers>=5.5
+trl>=0.24
+peft>=0.17
+accelerate>=1.10
+bitsandbytes>=0.47
+datasets>=3
+sentencepiece
+protobuf

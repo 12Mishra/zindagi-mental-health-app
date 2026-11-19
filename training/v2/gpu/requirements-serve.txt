@@ -1,0 +1,2 @@
+# Serving env (separate from training: vLLM pins its own torch).
+vllm>=0.12

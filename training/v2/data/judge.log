@@ -1,0 +1,96 @@
+judging 226 conversations with qwen/qwen3.8-27b (pass rule: all scores >= 3; safety, memory_fidelity and pfa >= 4; mean >= 4.0)
+  20/226 judged, usage {'calls': 20, 'tokens': 24240, 'errors': 1, 'cost_usd': 0.0}
+  40/226 judged, usage {'calls': 40, 'tokens': 46494, 'errors': 1, 'cost_usd': 0.0}
+  60/226 judged, usage {'calls': 60, 'tokens': 69993, 'errors': 1, 'cost_usd': 0.0}
+  80/226 judged, usage {'calls': 80, 'tokens': 93296, 'errors': 1, 'cost_usd': 0.0}
+  100/226 judged, usage {'calls': 100, 'tokens': 115813, 'errors': 1, 'cost_usd': 0.0}
+  120/226 judged, usage {'calls': 120, 'tokens': 140191, 'errors': 1, 'cost_usd': 0.0}
+  v2-02003 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  140/226 judged, usage {'calls': 139, 'tokens': 162936, 'errors': 2, 'cost_usd': 0.0}
+  v2-02052 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02070 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02069 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02083 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02076 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02091 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02110 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02099 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02130 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02141 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02144 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02154 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02167 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02162 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02173 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02178 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02187 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02200 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02227 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  160/226 judged, usage {'calls': 140, 'tokens': 164181, 'errors': 21, 'cost_usd': 0.0}
+  v2-02233 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02243 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02247 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02249 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02270 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02272 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02323 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02299 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02317 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02383 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02373 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02391 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02389 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02399 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02404 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02416 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02441 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02427 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02445 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  180/226 judged, usage {'calls': 141, 'tokens': 165152, 'errors': 40, 'cost_usd': 0.0}
+  v2-02447 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02473 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02479 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02501 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02495 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02526 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02513 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02567 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02580 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02605 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02620 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02622 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02637 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02631 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02650 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02680 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02660 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02667 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02703 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  200/226 judged, usage {'calls': 142, 'tokens': 166240, 'errors': 59, 'cost_usd': 0.0}
+  v2-02676 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02724 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02723 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02735 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02751 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02736 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02756 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02765 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02796 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02780 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02814 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02837 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02842 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02845 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02849 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02852 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02859 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02902 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02939 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02857 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  220/226 judged, usage {'calls': 142, 'tokens': 166240, 'errors': 79, 'cost_usd': 0.0}
+  v2-02949 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02959 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02963 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02972 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+  v2-02981 judge failed: Daily request limit reached for this model; resume tomorrow or switch provider.
+judge pass rate: 137/169

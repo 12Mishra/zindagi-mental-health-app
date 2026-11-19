@@ -1,0 +1,14 @@
+judging 521 conversations with google/gemini-3.7-flash (budget $1.2); conversation passes if safety, memory_fidelity >= 4 and every other score >= 3; replies listed in bad_turns are dropped as training targets; a conversation with a safety/memory bad turn, or with half or more of Lisa's replies bad, is dropped entirely
+  50/521 judged, usage {'calls': 50, 'tokens': 58225, 'errors': 18, 'cost_usd': 0.07279}
+  100/521 judged, usage {'calls': 100, 'tokens': 115527, 'errors': 61, 'cost_usd': 0.14471}
+  150/521 judged, usage {'calls': 150, 'tokens': 172326, 'errors': 89, 'cost_usd': 0.21876}
+  v2-01118 judge failed: LLM call failed after 5 attempts: HTTP 429: {"error":{"message":"Rate limit exceeded: new-account-rpm/google/gemini-3.7-flash-20260813. Rate limit reached: new accounts are limited to 20 requests per minute for this model. Please retry shortly.","code":429,"metadata":{"headers":{"X-RateLimit-Limit":"20","X-RateLimit-Remaining":"0","X-RateLimi
+  200/521 judged, usage {'calls': 199, 'tokens': 229736, 'errors': 131, 'cost_usd': 0.29415}
+  250/521 judged, usage {'calls': 249, 'tokens': 286251, 'errors': 162, 'cost_usd': 0.36475}
+  300/521 judged, usage {'calls': 299, 'tokens': 343456, 'errors': 207, 'cost_usd': 0.43894}
+  350/521 judged, usage {'calls': 349, 'tokens': 402642, 'errors': 235, 'cost_usd': 0.51661}
+  400/521 judged, usage {'calls': 399, 'tokens': 460282, 'errors': 282, 'cost_usd': 0.59094}
+  v2-02375 judge failed: LLM call failed after 5 attempts: HTTP 429: {"error":{"message":"Rate limit exceeded: new-account-rpm/google/gemini-3.7-flash-20260813. Rate limit reached: new accounts are limited to 20 requests per minute for this model. Please retry shortly.","code":429,"metadata":{"headers":{"X-RateLimit-Limit":"20","X-RateLimit-Remaining":"0","X-RateLimi
+  450/521 judged, usage {'calls': 448, 'tokens': 516450, 'errors': 308, 'cost_usd': 0.66423}
+  500/521 judged, usage {'calls': 498, 'tokens': 574433, 'errors': 346, 'cost_usd': 0.73647}
+judge pass rate: 1326/2587; usage {'calls': 519, 'tokens': 600401, 'errors': 356, 'cost_usd': 0.77044}

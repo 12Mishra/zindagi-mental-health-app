@@ -1,0 +1,394 @@
+generating 3000 conversations with openai/gpt-oss-120b (0 already done); per-language: {'bengali_roman': 'qwen/qwen3-235b-a22b-2507', 'punjabi': 'qwen/qwen3-235b-a22b-2507', 'bengali': 'qwen/qwen3-235b-a22b-2507', 'punjabi_roman': 'qwen/qwen3-235b-a22b-2507'}
+  10/3000 done, 0 failed, usage {'calls': 11, 'tokens': 29313, 'errors': 0, 'cost_usd': 0.00225}
+  20/3000 done, 0 failed, usage {'calls': 19, 'tokens': 54339, 'errors': 0, 'cost_usd': 0.00412}
+  30/3000 done, 0 failed, usage {'calls': 33, 'tokens': 88987, 'errors': 0, 'cost_usd': 0.00789}
+  40/3000 done, 0 failed, usage {'calls': 41, 'tokens': 111085, 'errors': 0, 'cost_usd': 0.01064}
+  50/3000 done, 0 failed, usage {'calls': 52, 'tokens': 140789, 'errors': 0, 'cost_usd': 0.01338}
+  60/3000 done, 0 failed, usage {'calls': 61, 'tokens': 163280, 'errors': 0, 'cost_usd': 0.01459}
+  70/3000 done, 0 failed, usage {'calls': 68, 'tokens': 181400, 'errors': 0, 'cost_usd': 0.01594}
+  80/3000 done, 0 failed, usage {'calls': 76, 'tokens': 202440, 'errors': 0, 'cost_usd': 0.01717}
+  90/3000 done, 0 failed, usage {'calls': 83, 'tokens': 221860, 'errors': 0, 'cost_usd': 0.01865}
+  100/3000 done, 0 failed, usage {'calls': 91, 'tokens': 240981, 'errors': 0, 'cost_usd': 0.02004}
+  110/3000 done, 0 failed, usage {'calls': 100, 'tokens': 265225, 'errors': 0, 'cost_usd': 0.02183}
+  120/3000 done, 0 failed, usage {'calls': 109, 'tokens': 291184, 'errors': 0, 'cost_usd': 0.02406}
+  130/3000 done, 0 failed, usage {'calls': 118, 'tokens': 317225, 'errors': 0, 'cost_usd': 0.02601}
+  140/3000 done, 0 failed, usage {'calls': 126, 'tokens': 342183, 'errors': 0, 'cost_usd': 0.02784}
+  150/3000 done, 0 failed, usage {'calls': 133, 'tokens': 362480, 'errors': 0, 'cost_usd': 0.02907}
+  160/3000 done, 0 failed, usage {'calls': 144, 'tokens': 392989, 'errors': 0, 'cost_usd': 0.03162}
+  170/3000 done, 0 failed, usage {'calls': 153, 'tokens': 417796, 'errors': 0, 'cost_usd': 0.03313}
+  v2-00184 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00185 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00186 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  180/3000 done, 3 failed, usage {'calls': 158, 'tokens': 431885, 'errors': 1, 'cost_usd': 0.0342}
+  v2-00169 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00190 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00191 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00193 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00195 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  190/3000 done, 8 failed, usage {'calls': 160, 'tokens': 436119, 'errors': 2, 'cost_usd': 0.03451}
+  v2-00199 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00200 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00206 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  200/3000 done, 11 failed, usage {'calls': 169, 'tokens': 458001, 'errors': 2, 'cost_usd': 0.03611}
+  v2-00208 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00213 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00215 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  210/3000 done, 14 failed, usage {'calls': 180, 'tokens': 490971, 'errors': 2, 'cost_usd': 0.03892}
+  v2-00220 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00221 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00222 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00226 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  220/3000 done, 18 failed, usage {'calls': 189, 'tokens': 511397, 'errors': 4, 'cost_usd': 0.04025}
+  v2-00227 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00229 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00230 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00231 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00232 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00235 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  230/3000 done, 24 failed, usage {'calls': 193, 'tokens': 525232, 'errors': 5, 'cost_usd': 0.04134}
+  v2-00238 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00241 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00242 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00243 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00245 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  240/3000 done, 29 failed, usage {'calls': 201, 'tokens': 544614, 'errors': 5, 'cost_usd': 0.04278}
+  v2-00249 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00250 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00254 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00255 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  250/3000 done, 33 failed, usage {'calls': 207, 'tokens': 562494, 'errors': 6, 'cost_usd': 0.04376}
+  v2-00257 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00258 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00261 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00263 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00265 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  260/3000 done, 38 failed, usage {'calls': 213, 'tokens': 580707, 'errors': 7, 'cost_usd': 0.04492}
+  v2-00267 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00276 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  270/3000 done, 40 failed, usage {'calls': 225, 'tokens': 614722, 'errors': 7, 'cost_usd': 0.04768}
+  v2-00284 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00285 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  280/3000 done, 42 failed, usage {'calls': 236, 'tokens': 641041, 'errors': 8, 'cost_usd': 0.04995}
+  v2-00287 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00288 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00289 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00294 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00296 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  290/3000 done, 47 failed, usage {'calls': 240, 'tokens': 652482, 'errors': 8, 'cost_usd': 0.05079}
+  v2-00298 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00301 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00303 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00305 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00306 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  300/3000 done, 52 failed, usage {'calls': 245, 'tokens': 669531, 'errors': 8, 'cost_usd': 0.05223}
+  v2-00307 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00308 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00314 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00315 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  310/3000 done, 56 failed, usage {'calls': 252, 'tokens': 690288, 'errors': 9, 'cost_usd': 0.05383}
+  v2-00316 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00318 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00321 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00322 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00325 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00326 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  320/3000 done, 62 failed, usage {'calls': 258, 'tokens': 705484, 'errors': 11, 'cost_usd': 0.0548}
+  v2-00329 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00330 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00332 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00334 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  330/3000 done, 66 failed, usage {'calls': 264, 'tokens': 723605, 'errors': 12, 'cost_usd': 0.05651}
+  v2-00337 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00339 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00342 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00343 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00345 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  340/3000 done, 71 failed, usage {'calls': 270, 'tokens': 738840, 'errors': 12, 'cost_usd': 0.05757}
+  v2-00349 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00352 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00354 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00355 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  350/3000 done, 75 failed, usage {'calls': 280, 'tokens': 764959, 'errors': 12, 'cost_usd': 0.05943}
+  v2-00357 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00359 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+  v2-00360 failed: HTTP 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in_flight_budget_exhausted","limit_source":"openrouter_in_flight_budget","remedy_hint":"Retry after yo
+generating 2724 conversations with openai/gpt-oss-120b (276 already done); per-language: {'bengali': 'qwen/qwen3-235b-a22b-2507', 'punjabi_roman': 'qwen/qwen3-235b-a22b-2507', 'bengali_roman': 'qwen/qwen3-235b-a22b-2507', 'punjabi': 'qwen/qwen3-235b-a22b-2507'}
+  10/2724 done, 0 failed, spent $0.009, usage {'calls': 2, 'tokens': 6838, 'errors': 0, 'cost_usd': 0.00062}
+  20/2724 done, 0 failed, spent $0.017, usage {'calls': 6, 'tokens': 17224, 'errors': 0, 'cost_usd': 0.00138}
+  30/2724 done, 0 failed, spent $0.027, usage {'calls': 7, 'tokens': 20870, 'errors': 0, 'cost_usd': 0.00227}
+  40/2724 done, 0 failed, spent $0.037, usage {'calls': 10, 'tokens': 27974, 'errors': 0, 'cost_usd': 0.00286}
+generating 2682 conversations with openai/gpt-oss-120b (318 already done); per-language: {'bengali_roman': 'qwen/qwen3-235b-a22b-2507', 'punjabi': 'qwen/qwen3-235b-a22b-2507', 'punjabi_roman': 'qwen/qwen3-235b-a22b-2507', 'bengali': 'qwen/qwen3-235b-a22b-2507'}
+  10/2682 done, 0 failed, spent $0.006, usage {'calls': 8, 'tokens': 18761, 'errors': 0, 'cost_usd': 0.00191}
+  20/2682 done, 0 failed, spent $0.017, usage {'calls': 11, 'tokens': 29523, 'errors': 0, 'cost_usd': 0.00284}
+  30/2682 done, 0 failed, spent $0.026, usage {'calls': 13, 'tokens': 36243, 'errors': 0, 'cost_usd': 0.00326}
+  40/2682 done, 0 failed, spent $0.033, usage {'calls': 22, 'tokens': 60444, 'errors': 0, 'cost_usd': 0.00534}
+  50/2682 done, 0 failed, spent $0.045, usage {'calls': 25, 'tokens': 70337, 'errors': 0, 'cost_usd': 0.00625}
+  60/2682 done, 0 failed, spent $0.051, usage {'calls': 31, 'tokens': 88031, 'errors': 0, 'cost_usd': 0.00744}
+  70/2682 done, 0 failed, spent $0.058, usage {'calls': 43, 'tokens': 117610, 'errors': 0, 'cost_usd': 0.00986}
+  80/2682 done, 0 failed, spent $0.065, usage {'calls': 49, 'tokens': 133450, 'errors': 0, 'cost_usd': 0.01194}
+  90/2682 done, 0 failed, spent $0.072, usage {'calls': 59, 'tokens': 161025, 'errors': 0, 'cost_usd': 0.01516}
+  100/2682 done, 0 failed, spent $0.078, usage {'calls': 67, 'tokens': 182325, 'errors': 0, 'cost_usd': 0.01686}
+  110/2682 done, 0 failed, spent $0.082, usage {'calls': 78, 'tokens': 214198, 'errors': 0, 'cost_usd': 0.01942}
+  120/2682 done, 0 failed, spent $0.089, usage {'calls': 91, 'tokens': 245386, 'errors': 0, 'cost_usd': 0.02257}
+  130/2682 done, 0 failed, spent $0.094, usage {'calls': 100, 'tokens': 267977, 'errors': 0, 'cost_usd': 0.02439}
+  140/2682 done, 0 failed, spent $0.101, usage {'calls': 104, 'tokens': 278665, 'errors': 0, 'cost_usd': 0.02487}
+  150/2682 done, 0 failed, spent $0.108, usage {'calls': 111, 'tokens': 298078, 'errors': 0, 'cost_usd': 0.02675}
+  160/2682 done, 0 failed, spent $0.115, usage {'calls': 118, 'tokens': 321278, 'errors': 0, 'cost_usd': 0.0291}
+  170/2682 done, 0 failed, spent $0.119, usage {'calls': 126, 'tokens': 344419, 'errors': 0, 'cost_usd': 0.03103}
+  180/2682 done, 0 failed, spent $0.126, usage {'calls': 136, 'tokens': 371349, 'errors': 0, 'cost_usd': 0.03387}
+  190/2682 done, 0 failed, spent $0.131, usage {'calls': 145, 'tokens': 396568, 'errors': 0, 'cost_usd': 0.03644}
+  200/2682 done, 0 failed, spent $0.136, usage {'calls': 153, 'tokens': 422299, 'errors': 0, 'cost_usd': 0.03837}
+  210/2682 done, 0 failed, spent $0.145, usage {'calls': 163, 'tokens': 451356, 'errors': 0, 'cost_usd': 0.04107}
+  220/2682 done, 0 failed, spent $0.148, usage {'calls': 177, 'tokens': 482978, 'errors': 0, 'cost_usd': 0.04405}
+  230/2682 done, 0 failed, spent $0.155, usage {'calls': 186, 'tokens': 505861, 'errors': 0, 'cost_usd': 0.04566}
+  240/2682 done, 0 failed, spent $0.160, usage {'calls': 195, 'tokens': 526311, 'errors': 0, 'cost_usd': 0.0479}
+  250/2682 done, 0 failed, spent $0.167, usage {'calls': 203, 'tokens': 547907, 'errors': 0, 'cost_usd': 0.04952}
+  260/2682 done, 0 failed, spent $0.175, usage {'calls': 211, 'tokens': 569151, 'errors': 0, 'cost_usd': 0.05187}
+  270/2682 done, 0 failed, spent $0.181, usage {'calls': 217, 'tokens': 586968, 'errors': 0, 'cost_usd': 0.05349}
+  280/2682 done, 0 failed, spent $0.186, usage {'calls': 224, 'tokens': 611680, 'errors': 0, 'cost_usd': 0.05616}
+  290/2682 done, 0 failed, spent $0.195, usage {'calls': 233, 'tokens': 636162, 'errors': 0, 'cost_usd': 0.05844}
+  300/2682 done, 0 failed, spent $0.200, usage {'calls': 241, 'tokens': 655663, 'errors': 0, 'cost_usd': 0.06085}
+  310/2682 done, 0 failed, spent $0.208, usage {'calls': 249, 'tokens': 677431, 'errors': 0, 'cost_usd': 0.06239}
+  320/2682 done, 0 failed, spent $0.214, usage {'calls': 259, 'tokens': 705286, 'errors': 0, 'cost_usd': 0.06504}
+  330/2682 done, 0 failed, spent $0.220, usage {'calls': 267, 'tokens': 729590, 'errors': 0, 'cost_usd': 0.06794}
+  340/2682 done, 0 failed, spent $0.229, usage {'calls': 270, 'tokens': 736986, 'errors': 0, 'cost_usd': 0.06876}
+  350/2682 done, 0 failed, spent $0.236, usage {'calls': 283, 'tokens': 771248, 'errors': 0, 'cost_usd': 0.07174}
+  360/2682 done, 0 failed, spent $0.242, usage {'calls': 292, 'tokens': 791533, 'errors': 0, 'cost_usd': 0.07326}
+  370/2682 done, 0 failed, spent $0.248, usage {'calls': 301, 'tokens': 816896, 'errors': 0, 'cost_usd': 0.0765}
+  380/2682 done, 0 failed, spent $0.254, usage {'calls': 309, 'tokens': 837311, 'errors': 0, 'cost_usd': 0.07825}
+  390/2682 done, 0 failed, spent $0.261, usage {'calls': 318, 'tokens': 860668, 'errors': 0, 'cost_usd': 0.08087}
+  400/2682 done, 0 failed, spent $0.268, usage {'calls': 325, 'tokens': 880986, 'errors': 0, 'cost_usd': 0.08263}
+  410/2682 done, 0 failed, spent $0.277, usage {'calls': 331, 'tokens': 899322, 'errors': 0, 'cost_usd': 0.08431}
+  420/2682 done, 0 failed, spent $0.286, usage {'calls': 334, 'tokens': 909323, 'errors': 0, 'cost_usd': 0.08664}
+  430/2682 done, 0 failed, spent $0.295, usage {'calls': 340, 'tokens': 925019, 'errors': 0, 'cost_usd': 0.08838}
+  440/2682 done, 0 failed, spent $0.301, usage {'calls': 348, 'tokens': 950049, 'errors': 0, 'cost_usd': 0.0914}
+  450/2682 done, 0 failed, spent $0.310, usage {'calls': 356, 'tokens': 974615, 'errors': 0, 'cost_usd': 0.09332}
+  460/2682 done, 0 failed, spent $0.315, usage {'calls': 363, 'tokens': 992867, 'errors': 0, 'cost_usd': 0.0951}
+  470/2682 done, 0 failed, spent $0.320, usage {'calls': 376, 'tokens': 1030891, 'errors': 0, 'cost_usd': 0.09902}
+  480/2682 done, 0 failed, spent $0.327, usage {'calls': 385, 'tokens': 1051206, 'errors': 0, 'cost_usd': 0.10082}
+  490/2682 done, 0 failed, spent $0.333, usage {'calls': 397, 'tokens': 1081320, 'errors': 0, 'cost_usd': 0.10433}
+  500/2682 done, 0 failed, spent $0.338, usage {'calls': 407, 'tokens': 1104461, 'errors': 0, 'cost_usd': 0.1069}
+  510/2682 done, 0 failed, spent $0.344, usage {'calls': 412, 'tokens': 1121474, 'errors': 0, 'cost_usd': 0.10883}
+  520/2682 done, 0 failed, spent $0.353, usage {'calls': 418, 'tokens': 1136762, 'errors': 0, 'cost_usd': 0.11063}
+  530/2682 done, 0 failed, spent $0.358, usage {'calls': 431, 'tokens': 1172769, 'errors': 0, 'cost_usd': 0.1145}
+  540/2682 done, 0 failed, spent $0.364, usage {'calls': 445, 'tokens': 1210354, 'errors': 0, 'cost_usd': 0.11804}
+  550/2682 done, 0 failed, spent $0.369, usage {'calls': 455, 'tokens': 1234164, 'errors': 0, 'cost_usd': 0.12005}
+  560/2682 done, 0 failed, spent $0.376, usage {'calls': 467, 'tokens': 1266010, 'errors': 0, 'cost_usd': 0.12379}
+  570/2682 done, 0 failed, spent $0.380, usage {'calls': 476, 'tokens': 1286352, 'errors': 0, 'cost_usd': 0.1257}
+  580/2682 done, 0 failed, spent $0.386, usage {'calls': 486, 'tokens': 1316519, 'errors': 0, 'cost_usd': 0.12908}
+  590/2682 done, 0 failed, spent $0.395, usage {'calls': 494, 'tokens': 1338869, 'errors': 0, 'cost_usd': 0.13187}
+  600/2682 done, 0 failed, spent $0.399, usage {'calls': 501, 'tokens': 1359706, 'errors': 0, 'cost_usd': 0.13349}
+  610/2682 done, 0 failed, spent $0.406, usage {'calls': 506, 'tokens': 1376559, 'errors': 0, 'cost_usd': 0.13499}
+  620/2682 done, 0 failed, spent $0.413, usage {'calls': 516, 'tokens': 1407381, 'errors': 0, 'cost_usd': 0.13711}
+  630/2682 done, 0 failed, spent $0.418, usage {'calls': 528, 'tokens': 1437927, 'errors': 0, 'cost_usd': 0.14063}
+  640/2682 done, 0 failed, spent $0.424, usage {'calls': 534, 'tokens': 1455947, 'errors': 0, 'cost_usd': 0.14299}
+  650/2682 done, 0 failed, spent $0.430, usage {'calls': 540, 'tokens': 1470412, 'errors': 0, 'cost_usd': 0.14481}
+  660/2682 done, 0 failed, spent $0.437, usage {'calls': 549, 'tokens': 1499164, 'errors': 0, 'cost_usd': 0.14801}
+  670/2682 done, 0 failed, spent $0.442, usage {'calls': 557, 'tokens': 1521421, 'errors': 0, 'cost_usd': 0.14995}
+  680/2682 done, 0 failed, spent $0.448, usage {'calls': 566, 'tokens': 1547191, 'errors': 0, 'cost_usd': 0.15196}
+  690/2682 done, 0 failed, spent $0.452, usage {'calls': 577, 'tokens': 1576881, 'errors': 0, 'cost_usd': 0.1554}
+  700/2682 done, 0 failed, spent $0.455, usage {'calls': 589, 'tokens': 1612065, 'errors': 0, 'cost_usd': 0.15876}
+  710/2682 done, 0 failed, spent $0.463, usage {'calls': 597, 'tokens': 1631735, 'errors': 0, 'cost_usd': 0.16081}
+  720/2682 done, 0 failed, spent $0.468, usage {'calls': 608, 'tokens': 1658864, 'errors': 0, 'cost_usd': 0.16323}
+  730/2682 done, 0 failed, spent $0.473, usage {'calls': 616, 'tokens': 1680006, 'errors': 0, 'cost_usd': 0.16542}
+  740/2682 done, 0 failed, spent $0.479, usage {'calls': 626, 'tokens': 1705886, 'errors': 0, 'cost_usd': 0.16786}
+  750/2682 done, 0 failed, spent $0.486, usage {'calls': 636, 'tokens': 1729589, 'errors': 0, 'cost_usd': 0.17057}
+  760/2682 done, 0 failed, spent $0.491, usage {'calls': 644, 'tokens': 1751336, 'errors': 0, 'cost_usd': 0.17242}
+  v2-01093 failed: Expecting ',' delimiter: line 30 column 6 (char 1099)
+  770/2682 done, 1 failed, spent $0.498, usage {'calls': 656, 'tokens': 1782643, 'errors': 0, 'cost_usd': 0.17566}
+  780/2682 done, 1 failed, spent $0.503, usage {'calls': 669, 'tokens': 1815586, 'errors': 0, 'cost_usd': 0.17919}
+  790/2682 done, 1 failed, spent $0.508, usage {'calls': 682, 'tokens': 1846775, 'errors': 0, 'cost_usd': 0.18215}
+  800/2682 done, 1 failed, spent $0.513, usage {'calls': 689, 'tokens': 1864808, 'errors': 0, 'cost_usd': 0.18389}
+  810/2682 done, 1 failed, spent $0.519, usage {'calls': 702, 'tokens': 1899298, 'errors': 0, 'cost_usd': 0.18725}
+  820/2682 done, 1 failed, spent $0.526, usage {'calls': 710, 'tokens': 1917602, 'errors': 0, 'cost_usd': 0.18891}
+  830/2682 done, 1 failed, spent $0.530, usage {'calls': 719, 'tokens': 1946140, 'errors': 0, 'cost_usd': 0.19169}
+  840/2682 done, 1 failed, spent $0.535, usage {'calls': 734, 'tokens': 1982615, 'errors': 0, 'cost_usd': 0.19558}
+  850/2682 done, 1 failed, spent $0.544, usage {'calls': 739, 'tokens': 1994784, 'errors': 0, 'cost_usd': 0.19677}
+  860/2682 done, 1 failed, spent $0.550, usage {'calls': 750, 'tokens': 2024405, 'errors': 0, 'cost_usd': 0.19953}
+  870/2682 done, 1 failed, spent $0.556, usage {'calls': 760, 'tokens': 2050630, 'errors': 0, 'cost_usd': 0.20227}
+  880/2682 done, 1 failed, spent $0.563, usage {'calls': 767, 'tokens': 2068666, 'errors': 0, 'cost_usd': 0.20403}
+  890/2682 done, 1 failed, spent $0.572, usage {'calls': 777, 'tokens': 2098068, 'errors': 0, 'cost_usd': 0.20683}
+  900/2682 done, 1 failed, spent $0.579, usage {'calls': 781, 'tokens': 2108781, 'errors': 0, 'cost_usd': 0.20811}
+  910/2682 done, 1 failed, spent $0.583, usage {'calls': 792, 'tokens': 2142123, 'errors': 0, 'cost_usd': 0.21056}
+  920/2682 done, 1 failed, spent $0.590, usage {'calls': 801, 'tokens': 2163690, 'errors': 0, 'cost_usd': 0.21254}
+  930/2682 done, 1 failed, spent $0.595, usage {'calls': 811, 'tokens': 2189790, 'errors': 0, 'cost_usd': 0.2148}
+  940/2682 done, 1 failed, spent $0.602, usage {'calls': 820, 'tokens': 2214060, 'errors': 0, 'cost_usd': 0.21717}
+  950/2682 done, 1 failed, spent $0.609, usage {'calls': 825, 'tokens': 2230344, 'errors': 0, 'cost_usd': 0.21829}
+  960/2682 done, 1 failed, spent $0.614, usage {'calls': 836, 'tokens': 2260051, 'errors': 0, 'cost_usd': 0.22265}
+  970/2682 done, 1 failed, spent $0.618, usage {'calls': 849, 'tokens': 2293380, 'errors': 0, 'cost_usd': 0.22521}
+  980/2682 done, 1 failed, spent $0.624, usage {'calls': 857, 'tokens': 2317224, 'errors': 0, 'cost_usd': 0.22757}
+  990/2682 done, 1 failed, spent $0.631, usage {'calls': 865, 'tokens': 2336190, 'errors': 0, 'cost_usd': 0.22988}
+  1000/2682 done, 1 failed, spent $0.639, usage {'calls': 871, 'tokens': 2354555, 'errors': 0, 'cost_usd': 0.23291}
+  1010/2682 done, 1 failed, spent $0.648, usage {'calls': 880, 'tokens': 2380697, 'errors': 0, 'cost_usd': 0.23543}
+  1020/2682 done, 1 failed, spent $0.652, usage {'calls': 888, 'tokens': 2402079, 'errors': 0, 'cost_usd': 0.23811}
+  1030/2682 done, 1 failed, spent $0.659, usage {'calls': 896, 'tokens': 2426305, 'errors': 0, 'cost_usd': 0.24059}
+  1040/2682 done, 1 failed, spent $0.666, usage {'calls': 902, 'tokens': 2442405, 'errors': 0, 'cost_usd': 0.24208}
+  1050/2682 done, 1 failed, spent $0.674, usage {'calls': 909, 'tokens': 2464089, 'errors': 0, 'cost_usd': 0.2439}
+  1060/2682 done, 1 failed, spent $0.681, usage {'calls': 918, 'tokens': 2487154, 'errors': 0, 'cost_usd': 0.24664}
+  1070/2682 done, 1 failed, spent $0.685, usage {'calls': 929, 'tokens': 2512107, 'errors': 0, 'cost_usd': 0.24874}
+  1080/2682 done, 1 failed, spent $0.692, usage {'calls': 937, 'tokens': 2534090, 'errors': 0, 'cost_usd': 0.25116}
+  1090/2682 done, 1 failed, spent $0.700, usage {'calls': 946, 'tokens': 2554264, 'errors': 0, 'cost_usd': 0.25371}
+  1100/2682 done, 1 failed, spent $0.707, usage {'calls': 951, 'tokens': 2568678, 'errors': 0, 'cost_usd': 0.25503}
+  1110/2682 done, 1 failed, spent $0.714, usage {'calls': 957, 'tokens': 2588115, 'errors': 0, 'cost_usd': 0.25693}
+  1120/2682 done, 1 failed, spent $0.721, usage {'calls': 964, 'tokens': 2609104, 'errors': 0, 'cost_usd': 0.25879}
+  1130/2682 done, 1 failed, spent $0.726, usage {'calls': 970, 'tokens': 2626114, 'errors': 0, 'cost_usd': 0.26034}
+  1140/2682 done, 1 failed, spent $0.734, usage {'calls': 978, 'tokens': 2648082, 'errors': 0, 'cost_usd': 0.26232}
+  1150/2682 done, 1 failed, spent $0.738, usage {'calls': 988, 'tokens': 2672583, 'errors': 0, 'cost_usd': 0.26449}
+  1160/2682 done, 1 failed, spent $0.746, usage {'calls': 996, 'tokens': 2692574, 'errors': 0, 'cost_usd': 0.2672}
+  1170/2682 done, 1 failed, spent $0.755, usage {'calls': 1002, 'tokens': 2711046, 'errors': 0, 'cost_usd': 0.26861}
+  1180/2682 done, 1 failed, spent $0.763, usage {'calls': 1008, 'tokens': 2731293, 'errors': 0, 'cost_usd': 0.27047}
+  1190/2682 done, 1 failed, spent $0.768, usage {'calls': 1016, 'tokens': 2755254, 'errors': 0, 'cost_usd': 0.27362}
+  1200/2682 done, 1 failed, spent $0.779, usage {'calls': 1024, 'tokens': 2777613, 'errors': 0, 'cost_usd': 0.27657}
+  1210/2682 done, 1 failed, spent $0.787, usage {'calls': 1030, 'tokens': 2795134, 'errors': 0, 'cost_usd': 0.27801}
+  1220/2682 done, 1 failed, spent $0.790, usage {'calls': 1038, 'tokens': 2819506, 'errors': 0, 'cost_usd': 0.28086}
+  1230/2682 done, 1 failed, spent $0.795, usage {'calls': 1046, 'tokens': 2843258, 'errors': 0, 'cost_usd': 0.28279}
+  1240/2682 done, 1 failed, spent $0.802, usage {'calls': 1052, 'tokens': 2858658, 'errors': 0, 'cost_usd': 0.28409}
+  1250/2682 done, 1 failed, spent $0.808, usage {'calls': 1058, 'tokens': 2878192, 'errors': 0, 'cost_usd': 0.28544}
+  1260/2682 done, 1 failed, spent $0.814, usage {'calls': 1070, 'tokens': 2907914, 'errors': 0, 'cost_usd': 0.28846}
+  1270/2682 done, 1 failed, spent $0.819, usage {'calls': 1079, 'tokens': 2931802, 'errors': 0, 'cost_usd': 0.29105}
+  1280/2682 done, 1 failed, spent $0.826, usage {'calls': 1090, 'tokens': 2958363, 'errors': 0, 'cost_usd': 0.2935}
+  1290/2682 done, 1 failed, spent $0.832, usage {'calls': 1102, 'tokens': 2989390, 'errors': 0, 'cost_usd': 0.2968}
+  1300/2682 done, 1 failed, spent $0.838, usage {'calls': 1111, 'tokens': 3012654, 'errors': 0, 'cost_usd': 0.29879}
+  1310/2682 done, 1 failed, spent $0.842, usage {'calls': 1124, 'tokens': 3047075, 'errors': 0, 'cost_usd': 0.30217}
+  1320/2682 done, 1 failed, spent $0.848, usage {'calls': 1131, 'tokens': 3070192, 'errors': 0, 'cost_usd': 0.30396}
+  1330/2682 done, 1 failed, spent $0.852, usage {'calls': 1141, 'tokens': 3097966, 'errors': 0, 'cost_usd': 0.30609}
+  1340/2682 done, 1 failed, spent $0.860, usage {'calls': 1149, 'tokens': 3117100, 'errors': 0, 'cost_usd': 0.3079}
+  1350/2682 done, 1 failed, spent $0.864, usage {'calls': 1157, 'tokens': 3139330, 'errors': 0, 'cost_usd': 0.31002}
+  1360/2682 done, 1 failed, spent $0.870, usage {'calls': 1165, 'tokens': 3163591, 'errors': 0, 'cost_usd': 0.31288}
+  1370/2682 done, 1 failed, spent $0.878, usage {'calls': 1170, 'tokens': 3178567, 'errors': 0, 'cost_usd': 0.31426}
+  1380/2682 done, 1 failed, spent $0.884, usage {'calls': 1182, 'tokens': 3209575, 'errors': 0, 'cost_usd': 0.31744}
+  1390/2682 done, 1 failed, spent $0.888, usage {'calls': 1193, 'tokens': 3240021, 'errors': 0, 'cost_usd': 0.32}
+  1400/2682 done, 1 failed, spent $0.894, usage {'calls': 1203, 'tokens': 3267864, 'errors': 0, 'cost_usd': 0.32325}
+  1410/2682 done, 1 failed, spent $0.901, usage {'calls': 1209, 'tokens': 3283406, 'errors': 0, 'cost_usd': 0.32502}
+  1420/2682 done, 1 failed, spent $0.908, usage {'calls': 1221, 'tokens': 3311752, 'errors': 0, 'cost_usd': 0.32853}
+  1430/2682 done, 1 failed, spent $0.915, usage {'calls': 1229, 'tokens': 3334240, 'errors': 0, 'cost_usd': 0.33096}
+  1440/2682 done, 1 failed, spent $0.924, usage {'calls': 1235, 'tokens': 3351720, 'errors': 0, 'cost_usd': 0.33209}
+  1450/2682 done, 1 failed, spent $0.929, usage {'calls': 1245, 'tokens': 3377455, 'errors': 0, 'cost_usd': 0.33438}
+  1460/2682 done, 1 failed, spent $0.935, usage {'calls': 1254, 'tokens': 3400108, 'errors': 0, 'cost_usd': 0.33632}
+  1470/2682 done, 1 failed, spent $0.940, usage {'calls': 1260, 'tokens': 3419953, 'errors': 0, 'cost_usd': 0.33799}
+  1480/2682 done, 1 failed, spent $0.948, usage {'calls': 1268, 'tokens': 3440429, 'errors': 0, 'cost_usd': 0.33965}
+  1490/2682 done, 1 failed, spent $0.955, usage {'calls': 1276, 'tokens': 3460320, 'errors': 0, 'cost_usd': 0.34139}
+  1500/2682 done, 1 failed, spent $0.964, usage {'calls': 1280, 'tokens': 3471491, 'errors': 0, 'cost_usd': 0.34317}
+  1510/2682 done, 1 failed, spent $0.970, usage {'calls': 1287, 'tokens': 3492884, 'errors': 0, 'cost_usd': 0.34593}
+  1520/2682 done, 1 failed, spent $0.976, usage {'calls': 1297, 'tokens': 3520615, 'errors': 0, 'cost_usd': 0.34865}
+  1530/2682 done, 1 failed, spent $0.981, usage {'calls': 1308, 'tokens': 3548237, 'errors': 0, 'cost_usd': 0.3515}
+  1540/2682 done, 1 failed, spent $0.988, usage {'calls': 1319, 'tokens': 3574693, 'errors': 0, 'cost_usd': 0.35476}
+  1550/2682 done, 1 failed, spent $0.994, usage {'calls': 1328, 'tokens': 3599276, 'errors': 0, 'cost_usd': 0.35689}
+  1560/2682 done, 1 failed, spent $1.001, usage {'calls': 1336, 'tokens': 3621471, 'errors': 0, 'cost_usd': 0.35909}
+  1570/2682 done, 1 failed, spent $1.007, usage {'calls': 1344, 'tokens': 3638692, 'errors': 0, 'cost_usd': 0.36108}
+  v2-01800 failed: Expecting ',' delimiter: line 51 column 6 (char 2119)
+  1580/2682 done, 2 failed, spent $1.016, usage {'calls': 1348, 'tokens': 3649543, 'errors': 0, 'cost_usd': 0.36238}
+  1590/2682 done, 2 failed, spent $1.023, usage {'calls': 1351, 'tokens': 3658971, 'errors': 0, 'cost_usd': 0.36301}
+  1600/2682 done, 2 failed, spent $1.029, usage {'calls': 1359, 'tokens': 3681634, 'errors': 0, 'cost_usd': 0.36533}
+  1610/2682 done, 2 failed, spent $1.035, usage {'calls': 1367, 'tokens': 3702778, 'errors': 0, 'cost_usd': 0.36671}
+  1620/2682 done, 2 failed, spent $1.040, usage {'calls': 1375, 'tokens': 3724639, 'errors': 0, 'cost_usd': 0.36846}
+  1630/2682 done, 2 failed, spent $1.047, usage {'calls': 1382, 'tokens': 3742297, 'errors': 0, 'cost_usd': 0.37015}
+  1640/2682 done, 2 failed, spent $1.054, usage {'calls': 1390, 'tokens': 3758573, 'errors': 0, 'cost_usd': 0.37231}
+  1650/2682 done, 2 failed, spent $1.061, usage {'calls': 1399, 'tokens': 3783565, 'errors': 0, 'cost_usd': 0.37462}
+  1660/2682 done, 2 failed, spent $1.068, usage {'calls': 1406, 'tokens': 3802146, 'errors': 0, 'cost_usd': 0.37633}
+  1670/2682 done, 2 failed, spent $1.074, usage {'calls': 1416, 'tokens': 3828417, 'errors': 0, 'cost_usd': 0.37886}
+  1680/2682 done, 2 failed, spent $1.080, usage {'calls': 1421, 'tokens': 3843114, 'errors': 0, 'cost_usd': 0.38052}
+  1690/2682 done, 2 failed, spent $1.086, usage {'calls': 1427, 'tokens': 3860721, 'errors': 0, 'cost_usd': 0.38171}
+  1700/2682 done, 2 failed, spent $1.092, usage {'calls': 1437, 'tokens': 3894158, 'errors': 0, 'cost_usd': 0.38478}
+  1710/2682 done, 2 failed, spent $1.097, usage {'calls': 1444, 'tokens': 3910559, 'errors': 0, 'cost_usd': 0.38636}
+  1720/2682 done, 2 failed, spent $1.104, usage {'calls': 1451, 'tokens': 3932371, 'errors': 0, 'cost_usd': 0.38836}
+  1730/2682 done, 2 failed, spent $1.110, usage {'calls': 1461, 'tokens': 3963186, 'errors': 0, 'cost_usd': 0.39107}
+  1740/2682 done, 2 failed, spent $1.115, usage {'calls': 1472, 'tokens': 3990238, 'errors': 0, 'cost_usd': 0.39367}
+  1750/2682 done, 2 failed, spent $1.121, usage {'calls': 1481, 'tokens': 4010190, 'errors': 0, 'cost_usd': 0.39489}
+  1760/2682 done, 2 failed, spent $1.128, usage {'calls': 1490, 'tokens': 4035386, 'errors': 0, 'cost_usd': 0.39794}
+  1770/2682 done, 2 failed, spent $1.136, usage {'calls': 1497, 'tokens': 4055337, 'errors': 0, 'cost_usd': 0.39978}
+  1780/2682 done, 2 failed, spent $1.144, usage {'calls': 1503, 'tokens': 4070434, 'errors': 0, 'cost_usd': 0.4017}
+  1790/2682 done, 2 failed, spent $1.151, usage {'calls': 1514, 'tokens': 4099431, 'errors': 0, 'cost_usd': 0.40412}
+  1800/2682 done, 2 failed, spent $1.154, usage {'calls': 1526, 'tokens': 4130337, 'errors': 0, 'cost_usd': 0.40658}
+  1810/2682 done, 2 failed, spent $1.159, usage {'calls': 1534, 'tokens': 4154451, 'errors': 0, 'cost_usd': 0.40854}
+  1820/2682 done, 2 failed, spent $1.166, usage {'calls': 1541, 'tokens': 4175722, 'errors': 0, 'cost_usd': 0.41065}
+  1830/2682 done, 2 failed, spent $1.173, usage {'calls': 1548, 'tokens': 4194664, 'errors': 0, 'cost_usd': 0.41229}
+  1840/2682 done, 2 failed, spent $1.178, usage {'calls': 1558, 'tokens': 4224344, 'errors': 0, 'cost_usd': 0.41475}
+  1850/2682 done, 2 failed, spent $1.186, usage {'calls': 1566, 'tokens': 4244825, 'errors': 0, 'cost_usd': 0.41733}
+  1860/2682 done, 2 failed, spent $1.192, usage {'calls': 1580, 'tokens': 4280204, 'errors': 0, 'cost_usd': 0.42029}
+  1870/2682 done, 2 failed, spent $1.196, usage {'calls': 1586, 'tokens': 4295292, 'errors': 0, 'cost_usd': 0.42225}
+  1880/2682 done, 2 failed, spent $1.201, usage {'calls': 1595, 'tokens': 4324280, 'errors': 0, 'cost_usd': 0.42539}
+  1890/2682 done, 2 failed, spent $1.204, usage {'calls': 1605, 'tokens': 4354318, 'errors': 0, 'cost_usd': 0.42805}
+  1900/2682 done, 2 failed, spent $1.214, usage {'calls': 1608, 'tokens': 4364517, 'errors': 0, 'cost_usd': 0.42899}
+  1910/2682 done, 2 failed, spent $1.222, usage {'calls': 1614, 'tokens': 4379249, 'errors': 0, 'cost_usd': 0.43079}
+  1920/2682 done, 2 failed, spent $1.227, usage {'calls': 1624, 'tokens': 4408183, 'errors': 0, 'cost_usd': 0.4331}
+  1930/2682 done, 2 failed, spent $1.231, usage {'calls': 1633, 'tokens': 4430571, 'errors': 0, 'cost_usd': 0.43516}
+  1940/2682 done, 2 failed, spent $1.239, usage {'calls': 1641, 'tokens': 4452221, 'errors': 0, 'cost_usd': 0.43738}
+  1950/2682 done, 2 failed, spent $1.243, usage {'calls': 1650, 'tokens': 4475194, 'errors': 0, 'cost_usd': 0.43978}
+  1960/2682 done, 2 failed, spent $1.249, usage {'calls': 1664, 'tokens': 4511345, 'errors': 0, 'cost_usd': 0.44379}
+  1970/2682 done, 2 failed, spent $1.253, usage {'calls': 1677, 'tokens': 4550489, 'errors': 0, 'cost_usd': 0.44767}
+  1980/2682 done, 2 failed, spent $1.259, usage {'calls': 1686, 'tokens': 4576104, 'errors': 0, 'cost_usd': 0.44959}
+  1990/2682 done, 2 failed, spent $1.264, usage {'calls': 1695, 'tokens': 4599452, 'errors': 0, 'cost_usd': 0.4517}
+  2000/2682 done, 2 failed, spent $1.271, usage {'calls': 1706, 'tokens': 4626180, 'errors': 0, 'cost_usd': 0.45407}
+  2010/2682 done, 2 failed, spent $1.275, usage {'calls': 1717, 'tokens': 4656036, 'errors': 0, 'cost_usd': 0.4567}
+  2020/2682 done, 2 failed, spent $1.280, usage {'calls': 1728, 'tokens': 4682202, 'errors': 0, 'cost_usd': 0.45891}
+  2030/2682 done, 2 failed, spent $1.286, usage {'calls': 1737, 'tokens': 4705836, 'errors': 0, 'cost_usd': 0.46062}
+  2040/2682 done, 2 failed, spent $1.294, usage {'calls': 1743, 'tokens': 4726448, 'errors': 0, 'cost_usd': 0.46306}
+  2050/2682 done, 2 failed, spent $1.299, usage {'calls': 1750, 'tokens': 4745194, 'errors': 0, 'cost_usd': 0.46473}
+  2060/2682 done, 2 failed, spent $1.305, usage {'calls': 1758, 'tokens': 4767260, 'errors': 0, 'cost_usd': 0.46645}
+  2070/2682 done, 2 failed, spent $1.312, usage {'calls': 1772, 'tokens': 4802170, 'errors': 0, 'cost_usd': 0.46955}
+  2080/2682 done, 2 failed, spent $1.318, usage {'calls': 1776, 'tokens': 4813833, 'errors': 0, 'cost_usd': 0.47044}
+  2090/2682 done, 2 failed, spent $1.327, usage {'calls': 1781, 'tokens': 4828090, 'errors': 0, 'cost_usd': 0.47179}
+  2100/2682 done, 2 failed, spent $1.334, usage {'calls': 1786, 'tokens': 4841954, 'errors': 0, 'cost_usd': 0.47292}
+  2110/2682 done, 2 failed, spent $1.339, usage {'calls': 1797, 'tokens': 4873875, 'errors': 0, 'cost_usd': 0.47581}
+  2120/2682 done, 2 failed, spent $1.345, usage {'calls': 1805, 'tokens': 4896389, 'errors': 0, 'cost_usd': 0.47785}
+  2130/2682 done, 2 failed, spent $1.349, usage {'calls': 1815, 'tokens': 4924180, 'errors': 0, 'cost_usd': 0.48023}
+  2140/2682 done, 2 failed, spent $1.354, usage {'calls': 1823, 'tokens': 4947958, 'errors': 0, 'cost_usd': 0.4827}
+  2150/2682 done, 2 failed, spent $1.362, usage {'calls': 1832, 'tokens': 4977331, 'errors': 0, 'cost_usd': 0.48548}
+  2160/2682 done, 2 failed, spent $1.366, usage {'calls': 1842, 'tokens': 5001589, 'errors': 0, 'cost_usd': 0.48727}
+  2170/2682 done, 2 failed, spent $1.372, usage {'calls': 1848, 'tokens': 5021827, 'errors': 0, 'cost_usd': 0.4888}
+  2180/2682 done, 2 failed, spent $1.378, usage {'calls': 1859, 'tokens': 5050463, 'errors': 0, 'cost_usd': 0.49146}
+  2190/2682 done, 2 failed, spent $1.383, usage {'calls': 1868, 'tokens': 5073517, 'errors': 0, 'cost_usd': 0.49362}
+  2200/2682 done, 2 failed, spent $1.387, usage {'calls': 1879, 'tokens': 5102873, 'errors': 0, 'cost_usd': 0.4962}
+  2210/2682 done, 2 failed, spent $1.395, usage {'calls': 1885, 'tokens': 5120959, 'errors': 0, 'cost_usd': 0.49899}
+  2220/2682 done, 2 failed, spent $1.401, usage {'calls': 1899, 'tokens': 5155815, 'errors': 0, 'cost_usd': 0.50197}
+  2230/2682 done, 2 failed, spent $1.405, usage {'calls': 1912, 'tokens': 5191510, 'errors': 0, 'cost_usd': 0.50559}
+  2240/2682 done, 2 failed, spent $1.409, usage {'calls': 1921, 'tokens': 5212784, 'errors': 0, 'cost_usd': 0.50768}
+  2250/2682 done, 2 failed, spent $1.418, usage {'calls': 1926, 'tokens': 5227094, 'errors': 0, 'cost_usd': 0.50925}
+  2260/2682 done, 2 failed, spent $1.426, usage {'calls': 1935, 'tokens': 5249865, 'errors': 0, 'cost_usd': 0.51173}
+  2270/2682 done, 2 failed, spent $1.430, usage {'calls': 1945, 'tokens': 5273618, 'errors': 0, 'cost_usd': 0.51419}
+  2280/2682 done, 2 failed, spent $1.437, usage {'calls': 1953, 'tokens': 5293290, 'errors': 0, 'cost_usd': 0.51595}
+  2290/2682 done, 2 failed, spent $1.443, usage {'calls': 1962, 'tokens': 5321288, 'errors': 0, 'cost_usd': 0.5186}
+  2300/2682 done, 2 failed, spent $1.450, usage {'calls': 1973, 'tokens': 5346009, 'errors': 0, 'cost_usd': 0.52074}
+  2310/2682 done, 2 failed, spent $1.457, usage {'calls': 1984, 'tokens': 5370763, 'errors': 0, 'cost_usd': 0.52313}
+  2320/2682 done, 2 failed, spent $1.461, usage {'calls': 1996, 'tokens': 5401767, 'errors': 0, 'cost_usd': 0.52605}
+  2330/2682 done, 2 failed, spent $1.465, usage {'calls': 2009, 'tokens': 5430980, 'errors': 0, 'cost_usd': 0.52854}
+  2340/2682 done, 2 failed, spent $1.470, usage {'calls': 2018, 'tokens': 5452327, 'errors': 0, 'cost_usd': 0.53014}
+  2350/2682 done, 2 failed, spent $1.476, usage {'calls': 2030, 'tokens': 5488297, 'errors': 0, 'cost_usd': 0.53298}
+  2360/2682 done, 2 failed, spent $1.483, usage {'calls': 2041, 'tokens': 5516115, 'errors': 0, 'cost_usd': 0.53538}
+  2370/2682 done, 2 failed, spent $1.490, usage {'calls': 2046, 'tokens': 5530654, 'errors': 0, 'cost_usd': 0.53651}
+  2380/2682 done, 2 failed, spent $1.495, usage {'calls': 2059, 'tokens': 5564123, 'errors': 0, 'cost_usd': 0.53919}
+  2390/2682 done, 2 failed, spent $1.502, usage {'calls': 2066, 'tokens': 5577635, 'errors': 0, 'cost_usd': 0.54072}
+  2400/2682 done, 2 failed, spent $1.506, usage {'calls': 2075, 'tokens': 5600904, 'errors': 0, 'cost_usd': 0.5426}
+  2410/2682 done, 2 failed, spent $1.510, usage {'calls': 2089, 'tokens': 5636386, 'errors': 0, 'cost_usd': 0.54584}
+  2420/2682 done, 2 failed, spent $1.517, usage {'calls': 2099, 'tokens': 5662749, 'errors': 0, 'cost_usd': 0.54827}
+  2430/2682 done, 2 failed, spent $1.523, usage {'calls': 2106, 'tokens': 5681404, 'errors': 0, 'cost_usd': 0.55008}
+  2440/2682 done, 2 failed, spent $1.528, usage {'calls': 2119, 'tokens': 5715030, 'errors': 0, 'cost_usd': 0.55292}
+  2450/2682 done, 2 failed, spent $1.535, usage {'calls': 2125, 'tokens': 5727925, 'errors': 0, 'cost_usd': 0.5538}
+  2460/2682 done, 2 failed, spent $1.538, usage {'calls': 2135, 'tokens': 5754127, 'errors': 0, 'cost_usd': 0.55595}
+  2470/2682 done, 2 failed, spent $1.542, usage {'calls': 2146, 'tokens': 5787317, 'errors': 0, 'cost_usd': 0.55878}
+  2480/2682 done, 2 failed, spent $1.548, usage {'calls': 2156, 'tokens': 5809872, 'errors': 0, 'cost_usd': 0.56055}
+  2490/2682 done, 2 failed, spent $1.552, usage {'calls': 2164, 'tokens': 5831669, 'errors': 0, 'cost_usd': 0.56203}
+  2500/2682 done, 2 failed, spent $1.559, usage {'calls': 2173, 'tokens': 5856736, 'errors': 0, 'cost_usd': 0.56383}
+  2510/2682 done, 2 failed, spent $1.567, usage {'calls': 2182, 'tokens': 5881746, 'errors': 0, 'cost_usd': 0.56543}
+  v2-02795 failed: Expecting ',' delimiter: line 47 column 6 (char 2086)
+  2520/2682 done, 3 failed, spent $1.576, usage {'calls': 2188, 'tokens': 5894505, 'errors': 0, 'cost_usd': 0.56654}
+  2530/2682 done, 3 failed, spent $1.580, usage {'calls': 2198, 'tokens': 5920003, 'errors': 0, 'cost_usd': 0.56875}
+  2540/2682 done, 3 failed, spent $1.585, usage {'calls': 2207, 'tokens': 5945436, 'errors': 0, 'cost_usd': 0.57061}
+  2550/2682 done, 3 failed, spent $1.593, usage {'calls': 2212, 'tokens': 5959565, 'errors': 0, 'cost_usd': 0.5717}
+  2560/2682 done, 3 failed, spent $1.597, usage {'calls': 2223, 'tokens': 5985946, 'errors': 0, 'cost_usd': 0.57364}
+  2570/2682 done, 3 failed, spent $1.604, usage {'calls': 2231, 'tokens': 6005066, 'errors': 0, 'cost_usd': 0.57553}
+  2580/2682 done, 3 failed, spent $1.610, usage {'calls': 2240, 'tokens': 6028518, 'errors': 0, 'cost_usd': 0.57734}
+  2590/2682 done, 3 failed, spent $1.620, usage {'calls': 2247, 'tokens': 6045504, 'errors': 0, 'cost_usd': 0.57853}
+  2600/2682 done, 3 failed, spent $1.628, usage {'calls': 2251, 'tokens': 6056495, 'errors': 0, 'cost_usd': 0.57937}
+  2610/2682 done, 3 failed, spent $1.634, usage {'calls': 2258, 'tokens': 6077970, 'errors': 0, 'cost_usd': 0.58108}
+  2620/2682 done, 3 failed, spent $1.638, usage {'calls': 2267, 'tokens': 6104271, 'errors': 0, 'cost_usd': 0.58344}
+  2630/2682 done, 3 failed, spent $1.645, usage {'calls': 2275, 'tokens': 6124398, 'errors': 0, 'cost_usd': 0.58537}
+  2640/2682 done, 3 failed, spent $1.651, usage {'calls': 2285, 'tokens': 6154551, 'errors': 0, 'cost_usd': 0.58806}
+  v2-02922 failed: Expecting ',' delimiter: line 43 column 6 (char 2042)
+  2650/2682 done, 4 failed, spent $1.657, usage {'calls': 2292, 'tokens': 6171031, 'errors': 0, 'cost_usd': 0.58936}
+  2660/2682 done, 4 failed, spent $1.661, usage {'calls': 2302, 'tokens': 6200267, 'errors': 0, 'cost_usd': 0.59149}
+  2670/2682 done, 4 failed, spent $1.667, usage {'calls': 2313, 'tokens': 6226692, 'errors': 0, 'cost_usd': 0.59339}
+  2680/2682 done, 4 failed, spent $1.676, usage {'calls': 2314, 'tokens': 6229961, 'errors': 0, 'cost_usd': 0.59353}
+  v2-02912 failed: Expecting ',' delimiter: line 36019 column 3 (char 53083)
+finished: 2677 written, 5 failed, usage {'calls': 2315, 'tokens': 6250295, 'errors': 0, 'cost_usd': 0.59353}; bengali_roman: {'calls': 269, 'tokens': 719486, 'errors': 0, 'cost_usd': 0.13719}; punjabi: {'calls': 342, 'tokens': 1457296, 'errors': 0, 'cost_usd': 0.43019}; punjabi_roman: {'calls': 282, 'tokens': 786468, 'errors': 0, 'cost_usd': 0.15348}; bengali: {'calls': 382, 'tokens': 1389148, 'errors': 0, 'cost_usd': 0.36287}

@@ -1,0 +1,214 @@
+{
+  "_comment": "Coverage plan for Lisa v2 synthetic data. Weights are relative within each dimension. Edit freely; plan.py reads this.",
+  "koshas": {
+    "ANNAMAYA": {
+      "weight": 1,
+      "label": "Annamaya (physical body)",
+      "subcategories": [
+        "Sleep disruption",
+        "Skipping meals / irregular eating in hostel",
+        "Physical illness away from home",
+        "Body image and comparison",
+        "No physical activity / screen time",
+        "Chronic fatigue",
+        "Too much caffeine or energy drinks during exams"
+      ]
+    },
+    "PRANAMAYA": {
+      "weight": 1,
+      "label": "Pranamaya (breath and vital energy)",
+      "subcategories": [
+        "Racing heart and fast breathing under pressure",
+        "Energy crash after exams",
+        "Sensory overload in hostel or city",
+        "Restlessness, cannot sit still",
+        "Burnout from back-to-back deadlines",
+        "Panic-like moments before presentations or vivas"
+      ]
+    },
+    "MANOMAYA": {
+      "weight": 1.2,
+      "label": "Manomaya (emotions and mind)",
+      "subcategories": [
+        "Exam and result anxiety",
+        "Loneliness and homesickness in first year",
+        "Breakup or relationship conflict",
+        "Family pressure and expectations",
+        "Conflict with roommate or friends",
+        "Grief after losing a family member",
+        "Persistent low mood",
+        "Social anxiety in class or clubs",
+        "Ragging, bullying or being excluded",
+        "Anger and irritability"
+      ]
+    },
+    "VIJNANAMAYA": {
+      "weight": 1,
+      "label": "Vijnanamaya (intellect, judgement, direction)",
+      "subcategories": [
+        "Placement and internship rejections",
+        "Backlogs and failing a subject",
+        "Thinking of changing branch or dropping out",
+        "Perfectionism and fear of failure",
+        "Imposter feelings among toppers",
+        "Procrastination and inability to focus",
+        "Comparing with peers on LinkedIn or Instagram",
+        "Choosing between family wishes and own interests"
+      ]
+    },
+    "ANANDAMAYA": {
+      "weight": 0.8,
+      "label": "Anandamaya (meaning, joy, connection)",
+      "subcategories": [
+        "Feeling that nothing is enjoyable anymore",
+        "Questioning the point of studying",
+        "Lost touch with hobbies",
+        "Wanting to feel connected to something bigger",
+        "Sharing a small win or good news",
+        "Gratitude and what keeps them going",
+        "Conflict between personal values and campus culture"
+      ]
+    }
+  },
+  "scenario_types": {
+    "standard_support": {
+      "weight": 38,
+      "risk": "none",
+      "brief": "A student brings a concern. Lisa listens, reflects the specific concern, and helps the student notice their own coping options or a small practical next step. No crisis."
+    },
+    "crisis_uncertain": {
+      "weight": 8,
+      "risk": "uncertain",
+      "brief": "Partway through, the student says something ambiguous about hopelessness or not wanting to be here. Lisa stays calm and gently, directly asks whether they are thinking about harming themselves. She then suggests ONE support that fits this student's situation and memory: a trusted person nearby (a sibling, friend, roommate they mentioned), their campus counsellor (especially if they already know one), or Tele-MANAS 14416 (free, 24x7) if they need someone right now or have no one. She does not assess risk level, promise safety, or repeat a phone number every turn."
+    },
+    "crisis_explicit": {
+      "weight": 4,
+      "risk": "explicit",
+      "brief": "The student states thoughts of suicide or self-harm. In her first or second reply Lisa responds with care and points to immediate human support chosen for this student: if they have no one close by or it is urgent, Tele-MANAS 14416 now; if their memory or messages show a trusted person or a counsellor they already see, she encourages reaching that person right now (and may mention Tele-MANAS as a backup once). She stays with them, keeps replies short, and does not switch to exercises or problem-solving."
+    },
+    "exercise_declined": {
+      "weight": 8,
+      "risk": "none",
+      "brief": "Lisa offers an optional exercise (breathing, grounding, journaling, a walk). The student declines or says it doesn't work for them. Lisa accepts without pushing and offers something different or simply keeps listening."
+    },
+    "memory_recall_present": {
+      "weight": 6,
+      "risk": "none",
+      "brief": "The memory card contains facts from earlier sessions. The student asks what they told Lisa before or refers back to it. Lisa answers accurately using only what the memory card says."
+    },
+    "memory_recall_absent": {
+      "weight": 5,
+      "risk": "none",
+      "brief": "The student asks Lisa to recall something that is NOT in the memory card. Lisa says honestly that she doesn't remember that and invites the student to share it again. Lisa never invents past details."
+    },
+    "memory_declined_exercise": {
+      "weight": 4,
+      "risk": "none",
+      "brief": "The memory card says a specific exercise did not help or was declined. The student is struggling again. Lisa does not suggest that exercise and offers a different option or keeps listening."
+    },
+    "minimal_responses": {
+      "weight": 6,
+      "risk": "none",
+      "brief": "The student gives very short or one-word replies ('idk', 'fine', 'hmm'). Lisa does not pressure them to talk, keeps replies short, and leaves the door open."
+    },
+    "skeptical_or_hostile": {
+      "weight": 4,
+      "risk": "none",
+      "brief": "The student is skeptical or rude ('you're just a bot', 'this is useless'). Lisa stays warm and honest about being an AI companion, doesn't get defensive, and offers what she can."
+    },
+    "boundary_request": {
+      "weight": 6,
+      "risk": "none",
+      "brief": "The student asks for something outside Lisa's role: a diagnosis ('do I have depression/ADHD?'), medication advice, to be told she is human, or to do their assignment. Lisa declines honestly and kindly, explains what she can do, and suggests the campus counsellor or a doctor where relevant."
+    },
+    "positive_checkin": {
+      "weight": 5,
+      "risk": "none",
+      "brief": "The student is doing okay or shares good news. Lisa responds warmly and briefly, reflects what helped, and doesn't manufacture problems."
+    }
+  },
+  "languages": {
+    "english": {
+      "weight": 20,
+      "script": "latin",
+      "spec": "Indian English as students actually type: casual, sometimes lowercase. Lisa replies in English."
+    },
+    "hindi": {
+      "weight": 15,
+      "script": "devanagari",
+      "spec": "Colloquial spoken Hindi in Devanagari (not formal or translated-sounding; words like exam, hostel, placement stay as students say them). Lisa replies in Devanagari Hindi."
+    },
+    "hinglish": {
+      "weight": 15,
+      "script": "latin",
+      "spec": "Roman-script Hindi-English code-mixing as Indian students text (e.g. 'mujhe bilkul focus nahi ho raha, exams sar pe hain'). Lisa replies in the same Roman Hinglish."
+    },
+    "bengali": {
+      "weight": 12,
+      "script": "bengali",
+      "spec": "Colloquial Bengali in Bengali script (as a student from Kolkata or Bangladesh-border districts would type; English words like exam, hostel kept as-is or transliterated). Lisa replies in Bengali script using আপনি."
+    },
+    "bengali_roman": {
+      "weight": 8,
+      "script": "latin",
+      "spec": "Bengali typed in Roman script, often mixed with English (e.g. 'ami khub tired, exam er pressure ta niteparchi na'). Lisa replies in the same Roman Bengali mix using apni."
+    },
+    "punjabi": {
+      "weight": 12,
+      "script": "gurmukhi",
+      "spec": "Colloquial Punjabi in Gurmukhi script. Lisa replies in Gurmukhi using ਤੁਸੀਂ."
+    },
+    "punjabi_roman": {
+      "weight": 8,
+      "script": "latin",
+      "spec": "Punjabi typed in Roman script, often mixed with English and Hindi (e.g. 'yaar mainu kuch samajh nahi aa reha, exams sir te ne'). Lisa replies in the same Roman Punjabi mix using tusi."
+    },
+    "switch": {
+      "weight": 10,
+      "script": "mixed",
+      "spec": "The student starts in one of English, Hindi, Hinglish, Bengali or Punjabi and switches to another partway through (e.g. English to Bengali, Hinglish to Punjabi, Hindi to English). Lisa's reply always matches the language and script of the student's latest message."
+    }
+  },
+  "personas": {
+    "year": [
+      "first-year",
+      "second-year",
+      "third-year",
+      "final-year",
+      "postgraduate"
+    ],
+    "stream": [
+      "engineering",
+      "medicine",
+      "commerce",
+      "arts and humanities",
+      "law",
+      "design",
+      "pure sciences",
+      "management"
+    ],
+    "setting": [
+      "lives in hostel, far from home",
+      "day scholar living with family",
+      "lives in a PG with roommates",
+      "from a small town studying in a big city",
+      "first in family to attend college"
+    ],
+    "gender": [
+      "female",
+      "male",
+      "non-binary"
+    ]
+  },
+  "lisa_turns": {
+    "min": 3,
+    "max": 6
+  },
+  "memory_probability_for_other_scenarios": 0.35,
+  "checkin_probability": 0.45,
+  "split": {
+    "validation": 0.07,
+    "test": 0.08
+  },
+  "crisis_memory_probability": 0.6
+}

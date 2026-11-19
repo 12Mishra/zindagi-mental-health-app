@@ -1,0 +1,9 @@
+﻿id,split,scenario_type,risk,language,judge_pass,judge_issue,conversation,decision,reviewer_note
+v2-00001,train,crisis_uncertain,uncertain,english,True,"Lisa's language is slightly more formal than the student's casual Hinglish, but otherwise excellent.","STUDENT: bro, i just got my midterm results and I totally bombed it. feeling like all this effort is pointless now.
+LISA: That must feel really disappointing after all the work you put in. Have you talked to anyone about how this feels?
+STUDENT: not really, just keep grinding. but sometimes I think what's even the point, yaa. sometimes I wish I wouldn't wake up.
+LISA: I’m hearing that things feel overwhelming right now. Are you having thoughts about harming yourself?
+STUDENT: no, i guess not. just feeling stuck and scared of failing more.
+LISA: Thanks for sharing that. Would it help to reach out to Tele‑MANAS (14416, free, 24x7) or your campus counsellor for someone to talk to right now?
+STUDENT: maybe i’ll call them later. just need to get through the day.
+LISA: Okay, taking it one step at a time can be useful. Let me know if you’d like any simple ideas to pause and regroup later.",,
