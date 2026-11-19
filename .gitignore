@@ -1,4 +1,4 @@
-﻿# Large model files
+# Large model files
 *.gguf
 *.bin
 *.pt
@@ -18,6 +18,14 @@ server/tickets*.json
 
 docs/
 
-training/
+# Training: only the v2 pipeline and its source PDF are shared; models, venvs, keys and build zips stay local.
+training/*
+!training/v2/
+!training/raw/
+training/v2/lisa_v2_gpu.zip
+training/**/.venv*/
+training/**/runs/
 
 .expo/training/
+
+.env

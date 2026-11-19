@@ -72,6 +72,8 @@ export const config = {
   severityPollMs: positiveInteger('SEVERITY_POLL_MS', 10_000),
   ollamaUrl: process.env.OLLAMA_URL ?? 'http://localhost:11434',
   ollamaModel: process.env.OLLAMA_MODEL ?? '',
+  // Text chat backend: 'ollama' (OLLAMA_URL/OLLAMA_MODEL) or 'voice' (the OpenAI-compatible VOICE_LLM_* endpoint, e.g. vLLM).
+  chatLlmProvider: oneOf('CHAT_LLM_PROVIDER', ['ollama', 'voice'] as const, 'ollama'),
   voicePort: positiveInteger('VOICE_PORT', 4001),
   voiceMaxConversations: positiveInteger('VOICE_MAX_CONVERSATIONS', 1),
   voiceMaxSessionMinutes: positiveInteger('VOICE_MAX_SESSION_MINUTES', 30),
