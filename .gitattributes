@@ -1,0 +1,4 @@
+# Scripts run on Linux GPU boxes: keep LF even when cloned on Windows.
+*.sh text eol=lf
+training/v2/gpu/** text eol=lf
+*.pdf binary
