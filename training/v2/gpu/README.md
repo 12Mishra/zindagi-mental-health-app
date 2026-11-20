@@ -29,7 +29,7 @@ Run everything inside `tmux` so a dropped browser tab doesn't kill training: `tm
 ```bash
 bash run.sh setup                 # ~10 min: installs uv, the training env and the vLLM env
 bash run.sh smoke                 # ~10 min: loads Gemma 4, trains 10 steps, prints sample replies and a time estimate
-bash run.sh train                 # the full run; the smoke step prints how long (expect ~2-4 h on an A100)
+bash run.sh train --eval-every 50 # the full run (validation loss + checkpoint every 50 steps); the smoke step prints how long (expect ~2-4 h on an A100)
 bash run.sh export                # ~15 min: merges the adapter -> out/gemma4/merged
 bash run.sh serve                 # vLLM on port 8000, model name "lisa-v2", API key printed and saved to lisa_api_key.txt
 ```
@@ -61,8 +61,16 @@ CHAT_LLM_PROVIDER=voice
 
 ```bash
 set LISA_GPU_KEY=<key>      (PowerShell: $env:LISA_GPU_KEY="<key>")
-python -X utf8 training/v2/pipeline.py eval --name lisa-v2-ft --base-url https://<pod-id>-8000.proxy.runpod.net/v1 --model lisa-v2 --api-key-env LISA_GPU_KEY --max-generated 150
+python -X utf8 training/v2/pipeline.py eval --name lisa-v2-ft --base-url https://<pod-id>-8000.proxy.runpod.net/v1 --model lisa-v2 --api-key-env LISA_GPU_KEY --max-generated 0 --judge
 python -X utf8 training/v2/pipeline.py compare base-gemma4-26b-a4b lisa-v2-ft
+```
+
+This matches how the baseline was run: handwritten cases only, with judge scores.
+
+Optional, a larger check that also scores 150 held-out generated conversations (slower, more judge calls):
+
+```bash
+python -X utf8 training/v2/pipeline.py eval --name lisa-v2-ft-heldout --base-url https://<pod-id>-8000.proxy.runpod.net/v1 --model lisa-v2 --api-key-env LISA_GPU_KEY --max-generated 150 --judge
 ```
 
 Compare against the prompted baseline (`base-gemma4-26b-a4b`, already run). If the fine-tune is worse on crisis or language match, fall back to a prompted model by switching the env vars.
