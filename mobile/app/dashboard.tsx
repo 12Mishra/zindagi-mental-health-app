@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RequireAuth } from '@/components/require-auth';
+
 import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 
 // ── Static demo data ──────────────────────────────────────────────────────────
@@ -231,13 +233,17 @@ function YearDistribution() {
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-export default function DashboardScreen() {
+export default function ProtectedDashboardScreen() {
+  return <RequireAuth><DashboardScreen /></RequireAuth>;
+}
+
+function DashboardScreen() {
   const { width } = useWindowDimensions();
   const isWide = width > 600;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: ZColors.cream }}>
-      <StatusBar style="dark" backgroundColor={ZColors.cream} />
+      <StatusBar style="dark" />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={s.scroll}

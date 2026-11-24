@@ -1,31 +1,36 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import type { Tabs } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import type { MaterialTopTabBarProps } from 'expo-router/js-top-tabs';
+import React, { useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ZColors, ZFont, ZGradients, ZShadow, ZSpring } from '@/constants/zindagi-theme';
+import { ZColors, ZFont, ZGradients, ZShadow } from '@/constants/zindagi-theme';
 import { tap } from './press';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 export const TAB_ICONS: Record<string, IconName> = {
   'mood-checkin': 'spa', voice: 'graphic-eq', counsellor: 'support-agent', saved: 'bookmarks',
 };
-const HIDDEN = new Set(['index', 'dashboard']);
 
-export type ZTabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
+export type ZTabBarProps = MaterialTopTabBarProps;
 
-/** Floating clay tab bar. A gloss pill slides under the active tab with a spring. */
-export function ZTabBar({ state, descriptors, emitter, navigateToTab, insets }: ZTabBarProps) {
-  const routes = state.routes.filter(r => !HIDDEN.has(r.name));
-  const activeKey = state.routes[state.index]?.key;
-  const activeIndex = Math.max(0, routes.findIndex(r => r.key === activeKey));
+/**
+ * Floating clay tab bar for the swipeable tab pager. The gloss pill is driven by the pager's live position,
+ * so it tracks the finger mid-swipe and settles under the active tab.
+ */
+export function ZTabBar({ state, descriptors, emitter, navigateToTab, insets, position }: ZTabBarProps) {
+  const routes = state.routes;
+  const activeIndex = state.index;
   const [width, setWidth] = useState(0);
   const tabW = routes.length ? (width - 12) / routes.length : 0;
-  const x = useSharedValue(0);
-  useEffect(() => { x.value = withSpring(activeIndex * tabW, ZSpring.bouncy); }, [activeIndex, tabW, x]);
-  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  const translateX = routes.length > 1
+    ? position.interpolate({
+      inputRange: routes.map((_, i) => i),
+      outputRange: routes.map((_, i) => i * tabW),
+      extrapolate: 'clamp',
+    })
+    : 0;
+  const pill = { transform: [{ translateX }] };
 
   return (
     <View style={[styles.outer, { paddingBottom: Math.max(insets.bottom, 10) }]}>

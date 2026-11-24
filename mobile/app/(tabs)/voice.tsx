@@ -15,13 +15,14 @@ import { Backdrop } from '@/components/z/backdrop';
 import { PressScale, ZButton } from '@/components/z/press';
 import { Clay, Frost, Gloss } from '@/components/z/surfaces';
 import { ZColors, ZFont, ZGradients } from '@/constants/zindagi-theme';
+import { RequireAuth } from '@/components/require-auth';
 import { getAuthSession } from '@/lib/auth-session';
 import { getTodayMood } from '@/lib/daily-mood';
 import { deleteConversation, endConversation, issueVoiceTicket, startConversation } from '@/lib/conversation-api';
 import { dismissSupportPrompt, requestSupportPromptCheck, type PromptHint } from '@/lib/support-prompt-store';
 import { moodReaction, ToneTracker } from '@/lib/tone';
 import { createDemoVoiceClient } from '@/lib/demo-voice-client';
-import { createVoiceClient } from '@/lib/voice-client';
+import { createVoiceClient, isVoiceSupported, VOICE_UNSUPPORTED_MESSAGE } from '@/lib/voice-client';
 import type { VoiceClient, VoiceEvent } from '@/lib/voice-client-types';
 
 type Line = { id: string; role: 'user' | 'assistant' | 'system'; text: string };
@@ -59,7 +60,11 @@ function Bubble({ line }: { line: Line }) {
   );
 }
 
-export default function VoiceScreen() {
+export default function ProtectedVoiceScreen() {
+  return <RequireAuth><VoiceScreen /></RequireAuth>;
+}
+
+function VoiceScreen() {
   const router = useRouter();
   const focused = useScreenFocused();
   const { width } = useWindowDimensions();
@@ -80,6 +85,8 @@ export default function VoiceScreen() {
   const [moodLine, setMoodLine] = useState('');
   const client = useRef<VoiceClient | null>(null);
   const conversationId = useRef<string | null>(null);
+  // Mirrors conversationId for rendering: refs must not be read during render.
+  const [hasConversation, setHasConversation] = useState(false);
   const lineNumber = useRef(0);
   const scrollView = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const tracker = useRef<ToneTracker>(new ToneTracker([]));
@@ -196,6 +203,8 @@ export default function VoiceScreen() {
       await voice.start('demo');
       return;
     }
+    // Checked before a conversation is created on the server, so Expo Go never leaves an orphaned session behind.
+    if (!isVoiceSupported()) { setNotice(VOICE_UNSUPPORTED_MESSAGE); return; }
     const token = getAuthSession()?.session.token;
     if (!token) { router.push('/login'); return; }
     setState('connecting'); setNotice('Requesting microphone access and connecting…');
@@ -207,6 +216,7 @@ export default function VoiceScreen() {
       tracker.current = new ToneTracker(moods);
       const created = await startConversation(token, moods, today?.note || params.note, consent, memoryConsent);
       conversationId.current = created.id;
+      setHasConversation(true);
       const { ticket } = await issueVoiceTicket(token, created.id);
       const voice = createVoiceClient({ onEvent: onVoiceEvent, onError: message => setNotice(message) });
       client.current = voice;
@@ -215,6 +225,7 @@ export default function VoiceScreen() {
       setNotice(error instanceof Error ? error.message : 'Could not start voice session.');
       if (conversationId.current) await endConversation(token, conversationId.current).catch(() => {});
       conversationId.current = null;
+      setHasConversation(false);
       client.current?.end(); client.current = null;
       setState('idle');
     }
@@ -229,6 +240,7 @@ export default function VoiceScreen() {
   const reset = () => {
     client.current?.end(); client.current = null;
     conversationId.current = null;
+    setHasConversation(false);
     lineNumber.current = 0;
     setState('idle'); setLines([]); setPartial(''); setNotice(''); setSummaryStatus('');
     setMuted(false); setConfirmDelete(false); setDeleting(false);
@@ -245,6 +257,7 @@ export default function VoiceScreen() {
     try {
       await deleteConversation(token, id);
       conversationId.current = null;
+      setHasConversation(false);
       setSummaryStatus('none');
       setNotice('Saved session data was deleted.');
       setConfirmDelete(false);
@@ -317,7 +330,7 @@ export default function VoiceScreen() {
               'Summary status is unavailable. Check history later.'}</Text>
         <ZButton label="Done" icon="check" onPress={() => { reset(); router.replace('/mood-checkin'); }} style={styles.startBtn} />
         {consent && <ZButton variant="ghost" label="View saved sessions and summary status" onPress={() => { reset(); router.replace('/saved' as Href); }} />}
-        {consent && conversationId.current && <ZButton variant="clay" compact disabled={deleting}
+        {consent && hasConversation && <ZButton variant="clay" compact disabled={deleting}
           label={deleting ? 'Deleting…' : confirmDelete ? 'Confirm delete saved session' : 'Delete saved session data'}
           icon="delete-outline" onPress={() => confirmDelete ? void removeSavedSession() : setConfirmDelete(true)} />}
         {confirmDelete && !deleting && <ZButton variant="ghost" label="Cancel deletion" onPress={() => setConfirmDelete(false)} />}

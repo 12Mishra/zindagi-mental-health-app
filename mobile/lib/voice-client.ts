@@ -1,2 +1,2 @@
 // TypeScript entrypoint. Metro selects voice-client.web.ts or voice-client.native.ts by platform.
-export { createVoiceClient } from './voice-client.web';
+export { createVoiceClient, isVoiceSupported, VOICE_UNSUPPORTED_MESSAGE } from './voice-client.web';

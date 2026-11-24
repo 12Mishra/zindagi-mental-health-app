@@ -36,7 +36,6 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={theme}>
       <Stack
-        initialRouteName="login"
         screenOptions={{
           contentStyle: { backgroundColor: ZColors.canvas },
           animation: 'fade_from_bottom',

@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter, type Href } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Backdrop } from '@/components/z/backdrop';
 import { PressScale } from '@/components/z/press';
@@ -39,7 +39,7 @@ export default function TrustedContactsScreen() {
     catch (e) { setError(e instanceof Error ? e.message : 'Could not load your contacts.'); }
     finally { setLoading(false); }
   }, [token, router]);
-  useEffect(() => { void load(); }, [load]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const guard = async (work: () => Promise<void>) => {
     setSaving(true); setError('');

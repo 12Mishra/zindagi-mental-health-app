@@ -29,13 +29,22 @@ export function SupportPromptHost() {
   const [error, setError] = useState('');
   const checking = useRef(false);
 
+  const openPreview = useCallback(async (language: MessageLang) => {
+    const token = getAuthSession()?.session.token;
+    if (!token) return;
+    setBusy(true); setError('');
+    try { const { text } = await previewMessage(token, language); setPreview(text); setLang(language); setStep('preview'); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Could not load the message.'); }
+    finally { setBusy(false); }
+  }, []);
+
   // A spoken "yes, message Priya" picks Priya and, for a message, goes straight to the preview. The Send tap is still theirs.
-  const applyHint = (list: Contact[], hint?: PromptHint) => {
+  const applyHint = useCallback((list: Contact[], hint?: PromptHint) => {
     const found = hint?.contactId ? list.findIndex(c => c.id === hint.contactId) : -1;
     const index = found >= 0 ? found : 0;
     setSelected(index); setShowOthers(false);
     if (hint?.intent === 'message' && list[index]) void openPreview(lang);
-  };
+  }, [lang, openPreview]);
 
   const check = useCallback(async (hint?: PromptHint) => {
     const token = getAuthSession()?.session.token;
@@ -51,10 +60,11 @@ export function SupportPromptHost() {
       applyHint(list, hint);
     } catch { /* offline or signed out: try again next time */ }
     finally { checking.current = false; }
-  }, [prompt, contacts, step]);
+  }, [prompt, contacts, step, applyHint]);
 
   useEffect(() => {
-    void check();
+    // Deferred a tick so the first check's state updates land outside the effect body.
+    void Promise.resolve().then(() => check());
     const subscription = AppState.addEventListener('change', state => { if (state === 'active') void check(); });
     const unsubscribe = onSupportPromptCheck(hint => { void check(hint); });
     return () => { subscription.remove(); unsubscribe(); };
@@ -85,14 +95,6 @@ export function SupportPromptHost() {
     const result = await respond({ action: 'call', contactId: contact.id });
     if (result?.tel) void Linking.openURL(`tel:${result.tel}`);
     if (result) close();
-  };
-  const openPreview = async (language: MessageLang) => {
-    const token = getAuthSession()?.session.token;
-    if (!token) return;
-    setBusy(true); setError('');
-    try { const { text } = await previewMessage(token, language); setPreview(text); setLang(language); setStep('preview'); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Could not load the message.'); }
-    finally { setBusy(false); }
   };
   const send = async () => {
     if (!contact) return;

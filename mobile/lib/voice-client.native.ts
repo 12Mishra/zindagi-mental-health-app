@@ -1,4 +1,6 @@
-import { AppState } from 'react-native';
+import { AppState, TurboModuleRegistry } from 'react-native';
+
+import { VOICE_WS_URL } from '@/lib/api-config';
 import type { AudioContext, AudioRecorder } from 'react-native-audio-api';
 import type { VoiceClient, VoiceClientOptions, VoiceEvent } from './voice-client-types';
 import { PcmResampler } from './pcm-resampler';
@@ -9,13 +11,23 @@ const PLAYBACK_LEAD_S = 0.15;
 
 type AudioApi = typeof import('react-native-audio-api');
 
-// Loaded lazily: Expo Go has no react-native-audio-api native module, and a top-level import would crash the whole route.
+export const VOICE_UNSUPPORTED_MESSAGE =
+  'Hands-free voice needs the Zindagi development build. Expo Go does not include the audio engine it uses. You can still talk to Lisa in chat.';
+
+/**
+ * True when the react-native-audio-api native module is in this binary (dev/production builds, not Expo Go).
+ * Checked before requiring the package: its module body throws when the native side is missing, and Metro reports
+ * a throw from a runtime require() as a fatal red-screen error before any surrounding try/catch can see it.
+ */
+export function isVoiceSupported(): boolean {
+  return TurboModuleRegistry.get('AudioAPIModule') != null;
+}
+
+// Loaded lazily, and only after isVoiceSupported(): a top-level import would crash every route in Expo Go.
 function loadAudioApi(): AudioApi {
-  try {
-    return require('react-native-audio-api') as AudioApi;
-  } catch {
-    throw new Error('Voice needs a development build (react-native-audio-api is not available in Expo Go).');
-  }
+  if (!isVoiceSupported()) throw new Error(VOICE_UNSUPPORTED_MESSAGE);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- must stay lazy, see above
+  return require('react-native-audio-api') as AudioApi;
 }
 
 export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
@@ -94,7 +106,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
 
   return {
     async start(ticket: string) {
-      const url = process.env.EXPO_PUBLIC_VOICE_WS_URL;
+      const url = VOICE_WS_URL;
       if (!url) throw new Error('EXPO_PUBLIC_VOICE_WS_URL is not configured.');
       socket = new WebSocket(url);
       socket.binaryType = 'arraybuffer';

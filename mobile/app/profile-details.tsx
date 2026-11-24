@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -61,7 +60,7 @@ export default function ProfileDetailsScreen() {
     <View style={{ flex: 1 }}><Backdrop /><SafeAreaView style={s.safe}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <ScrollView
           contentContainerStyle={s.scroll}

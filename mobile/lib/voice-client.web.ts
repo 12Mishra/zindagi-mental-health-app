@@ -1,3 +1,4 @@
+import { VOICE_WS_URL } from '@/lib/api-config';
 import type { VoiceClient, VoiceClientOptions, VoiceEvent } from './voice-client-types';
 import { LevelMeter, rmsInt16, toLevel } from './voice-levels';
 
@@ -39,6 +40,13 @@ const startupMessage = (code?: string) => {
   return code ? `Voice could not start (${code}). Check the voice service terminal.` :
     'Cannot connect to the voice service. Start npm run voice in the server folder and check its terminal.';
 };
+
+export const VOICE_UNSUPPORTED_MESSAGE = 'This browser does not support realtime microphone capture.';
+
+/** Browsers capture audio with getUserMedia + AudioWorklet; there is no native module to be missing. */
+export function isVoiceSupported(): boolean {
+  return true;
+}
 
 export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   let socket: WebSocket | null = null;
@@ -108,7 +116,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
 
   return {
     async start(ticket: string) {
-      const base = process.env.EXPO_PUBLIC_VOICE_WS_URL;
+      const base = VOICE_WS_URL;
       if (!base) throw new Error('Voice URL is missing. Set EXPO_PUBLIC_VOICE_WS_URL in mobile/.env and restart Expo.');
       if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) throw new Error('This browser does not support realtime microphone capture.');
       stream = await navigator.mediaDevices.getUserMedia({

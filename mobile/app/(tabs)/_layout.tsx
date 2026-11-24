@@ -1,25 +1,31 @@
-import { Tabs } from "expo-router";
+import { TopTabs } from "expo-router/js-top-tabs";
 import React from "react";
 
 import { ZTabBar } from "@/components/z/tab-bar";
 import { ZColors } from "@/constants/zindagi-theme";
 
+/**
+ * The student tabs sit on a native pager (react-native-pager-view), so a horizontal swipe drags the next tab in
+ * and the bottom bar's pill follows the finger. Tapping a tab slides to it the same way.
+ */
 export default function TabLayout() {
   return (
-    <Tabs
+    <TopTabs
+      tabBarPosition="bottom"
       tabBar={props => <ZTabBar {...props} />}
+      style={{ backgroundColor: ZColors.canvas }}
       screenOptions={{
-        headerShown: false,
+        lazy: true,
+        lazyPreloadDistance: 1,
+        swipeEnabled: true,
+        animationEnabled: true,
         sceneStyle: { backgroundColor: ZColors.canvas },
-        animation: "shift",
       }}
     >
-      <Tabs.Screen name="mood-checkin" options={{ title: "Mood" }} />
-      <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="voice" options={{ title: "Voice" }} />
-      <Tabs.Screen name="counsellor" options={{ title: "Counsellor" }} />
-      <Tabs.Screen name="dashboard" options={{ href: null }} />
-      <Tabs.Screen name="saved" options={{ title: "Saved" }} />
-    </Tabs>
+      <TopTabs.Screen name="mood-checkin" options={{ title: "Mood" }} />
+      <TopTabs.Screen name="voice" options={{ title: "Voice" }} />
+      <TopTabs.Screen name="counsellor" options={{ title: "Counsellor" }} />
+      <TopTabs.Screen name="saved" options={{ title: "Saved" }} />
+    </TopTabs>
   );
 }

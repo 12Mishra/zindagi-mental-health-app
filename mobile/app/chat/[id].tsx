@@ -3,7 +3,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Keyboard, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -90,6 +90,15 @@ export default function ChatScreen() {
     if (atBottom.current) setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 30);
   }, [messages, typing]);
 
+  // Opening the keyboard shrinks the list; keep the latest messages (and what is being typed) in view.
+  useEffect(() => {
+    const sub = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => {
+      atBottom.current = true;
+      setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 60);
+    });
+    return () => sub.remove();
+  }, []);
+
   async function deliver(m: Local) {
     if (!token) return;
     try {
@@ -170,8 +179,10 @@ export default function ChatScreen() {
         <Text style={styles.noticeText}>Not for emergencies. In a crisis, tap the red icon above for helplines.</Text>
       </View>}
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView ref={scroller} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive"
+      {/* Android is edge-to-edge, so the window no longer resizes for the keyboard: pad on both platforms. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <ScrollView ref={scroller} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           onScroll={e => { const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent; atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80; }}
           scrollEventThrottle={100} showsVerticalScrollIndicator={false}>
           {loading ? <ActivityIndicator color={ZColors.olive} style={{ marginTop: 40 }} /> : <>

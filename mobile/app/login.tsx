@@ -5,6 +5,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,6 +33,7 @@ export default function LoginScreen() {
   const [isContinuing, setIsContinuing] = useState(false);
   const [error, setError] = useState('');
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const phoneInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const otpInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const [focus, setFocus] = useState<'phone' | 'otp' | null>(null);
   const { width } = useWindowDimensions();
@@ -120,13 +122,14 @@ export default function LoginScreen() {
       <SafeAreaView style={s.safe}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          // 'height' on Android (edge-to-edge) resizes the screen mid-focus, which can close the keyboard as it opens.
+          behavior="padding"
           keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <ScrollView
             ref={scrollRef}
             contentContainerStyle={s.scroll}
-            keyboardDismissMode="interactive"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -146,10 +149,15 @@ export default function LoginScreen() {
             <Animated.View entering={FadeInDown.delay(160).springify().damping(16)}>
               <Clay radius={26} style={s.formCard}>
                 <Text style={s.label}>Phone number</Text>
-                <View style={[s.inputWrap, focus === 'phone' && s.inputFocus]}>
+                <Pressable
+                  onPress={() => phoneInputRef.current?.focus()}
+                  style={[s.inputWrap, focus === 'phone' && s.inputFocus]}
+                  accessible={false}
+                >
                   <Text style={s.countryCode}>+91</Text>
                   <View style={s.sep} />
                   <TextInput
+                    ref={phoneInputRef}
                     value={phone}
                     onChangeText={text => setPhone(text.replace(/\D/g, '').slice(0, 10))}
                     keyboardType="number-pad"
@@ -162,9 +170,12 @@ export default function LoginScreen() {
                     accessibilityLabel="Phone number"
                     autoComplete="tel"
                     textContentType="telephoneNumber"
+                    showSoftInputOnFocus
+                    returnKeyType="done"
+                    onSubmitEditing={() => { void handleSendOtp(); }}
                   />
                   {canSendOtp && <MaterialIcons name="check-circle" size={18} color={ZColors.olive} />}
-                </View>
+                </Pressable>
 
                 <ZButton
                   variant={otpSent ? 'clay' : 'gloss'}
@@ -185,7 +196,11 @@ export default function LoginScreen() {
                     </View>
 
                     <Text style={s.label}>Enter OTP</Text>
-                    <View style={[s.inputWrap, focus === 'otp' && s.inputFocus]}>
+                    <Pressable
+                      onPress={() => otpInputRef.current?.focus()}
+                      style={[s.inputWrap, focus === 'otp' && s.inputFocus]}
+                      accessible={false}
+                    >
                       <TextInput
                         ref={otpInputRef}
                         value={otp}
@@ -200,8 +215,9 @@ export default function LoginScreen() {
                         accessibilityLabel="One-time password"
                         autoComplete="sms-otp"
                         textContentType="oneTimeCode"
+                        showSoftInputOnFocus
                       />
-                    </View>
+                    </Pressable>
 
                     <ZButton
                       label={isContinuing ? 'Verifying…' : 'Continue'}
@@ -249,10 +265,12 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 16,
     borderWidth: 1.5, borderColor: ZColors.hairline, minHeight: 56, paddingHorizontal: 16,
   },
-  inputFocus: { borderColor: ZColors.sageMid, backgroundColor: '#FFFFFF', shadowColor: ZColors.sageMid, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 2 },
+  // Focus only recolours the field. Toggling elevation/shadow here rebuilds the native view on Android
+  // and drops focus from the TextInput, so the keypad flashes and closes.
+  inputFocus: { borderColor: ZColors.sageMid, backgroundColor: '#FFFFFF' },
   countryCode: { fontSize: 16, fontFamily: ZFont.bold, color: ZColors.forest },
   sep: { width: 1, height: 22, backgroundColor: ZColors.hairline },
-  input: { flex: 1, color: ZColors.textPrimary, fontSize: 17, fontFamily: ZFont.semibold, paddingVertical: 12, ...webNoOutline },
+  input: { flex: 1, alignSelf: 'stretch', color: ZColors.textPrimary, fontSize: 17, fontFamily: ZFont.semibold, paddingVertical: 12, ...webNoOutline },
   otpBlock: { gap: 10, marginTop: 8 },
   sentRow: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(212, 227, 200, 0.55)', borderRadius: 12, padding: 10 },
   sentText: { flex: 1, fontSize: 12.5, color: ZColors.textSecondary, fontFamily: ZFont.semibold },

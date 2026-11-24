@@ -1,4 +1,4 @@
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { API_URL } from '@/lib/api-config';
 
 type ApiRequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -30,7 +30,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     });
   } catch {
     throw new ApiError(
-      `Unable to reach backend at ${API_URL}. Check that the server is running and EXPO_PUBLIC_API_URL is correct.`,
+      `Unable to reach backend at ${API_URL}. Check that the server is running and that this device is on the same Wi-Fi as the computer (and Windows Firewall allows port 4000).`,
       0,
     );
   }

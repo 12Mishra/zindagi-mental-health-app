@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { apiSocketUrl } from '@/lib/api-config';
 import { apiRequest } from '@/lib/conversation-api';
 import { getAuthSession } from '@/lib/auth-session';
 
@@ -35,11 +36,8 @@ const getTicket = (token: string) => apiRequest<{ ticket: string; path: string }
 
 export const newClientId = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 
-/** ws(s)://host/chat/ws derived from EXPO_PUBLIC_API_URL. */
-function socketUrl(path: string) {
-  const api = process.env.EXPO_PUBLIC_API_URL ?? '';
-  return api.replace(/^http/, 'ws').replace(/\/$/, '') + path;
-}
+/** ws(s)://host/chat/ws on the API server (resolved for phones, see api-config). */
+const socketUrl = apiSocketUrl;
 
 type Listener = (e: ChatEvent) => void;
 

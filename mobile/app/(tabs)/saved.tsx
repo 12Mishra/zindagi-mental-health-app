@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Backdrop } from '@/components/z/backdrop';
 import { PressScale } from '@/components/z/press';
@@ -29,7 +29,8 @@ export default function SavedSessionsScreen() {
     } finally { setLoading(false); }
   }, [router]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  // Refetch whenever the tab comes into view: the pager keeps it mounted, so a session saved from Voice shows up.
+  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   const remove = async (id: string) => {
     const token = getAuthSession()?.session.token;

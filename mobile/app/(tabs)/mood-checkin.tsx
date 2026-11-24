@@ -2,8 +2,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useScreenFocused } from "@/hooks/use-screen-focused";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -60,6 +60,16 @@ export default function MoodCheckinScreen() {
   const focused = useScreenFocused();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [noteText, setNoteText] = useState("");
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const viewportH = useRef(0);
+  const continueBottom = useRef(0);
+  // While the note is being typed, scroll just enough that the Continue button sits above the keyboard.
+  const revealContinue = useCallback(() => {
+    setTimeout(() => {
+      const y = continueBottom.current - viewportH.current + 24;
+      if (y > 0) scrollRef.current?.scrollTo({ y, animated: true });
+    }, 250);
+  }, []);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
 
@@ -122,7 +132,16 @@ export default function MoodCheckinScreen() {
     <View style={{ flex: 1 }}>
       <Backdrop />
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Padding (not window resize) on Android too: the app is edge-to-edge, so the keyboard would cover Continue. */}
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          onLayout={e => { viewportH.current = e.nativeEvent.layout.height; }}
+        >
           {/* ── Header ── */}
           <Animated.View entering={FadeIn.duration(400)} style={styles.header}>
             <View style={styles.logoRow}>
@@ -198,11 +217,15 @@ export default function MoodCheckinScreen() {
                       onChangeText={setNoteText}
                       textAlignVertical="top"
                       accessibilityLabel="Note"
+                      onFocus={revealContinue}
+                      onContentSizeChange={revealContinue}
                     />
                   </View>
                 </Frost>
               </Animated.View>
-              <ZButton label="Continue" icon="arrow-forward" iconRight disabled={!canContinue} onPress={handleContinue} />
+              <View onLayout={e => { const { y, height } = e.nativeEvent.layout; continueBottom.current = y + height; }}>
+                <ZButton label="Continue" icon="arrow-forward" iconRight disabled={!canContinue} onPress={handleContinue} />
+              </View>
             </>
           )}
 
@@ -216,6 +239,7 @@ export default function MoodCheckinScreen() {
             </PressScale>
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -224,7 +248,7 @@ export default function MoodCheckinScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  scroll: { padding: 20, paddingTop: 8, gap: 16, paddingBottom: 28 },
+  scroll: { padding: 20, paddingTop: 8, gap: 16, paddingBottom: 40, flexGrow: 1 },
 
   header: { gap: 2, marginBottom: 2 },
   logoRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
