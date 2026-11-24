@@ -42,6 +42,7 @@ model User {
   appointments    Appointment[]
   outreach        Outreach[]
   sessionRequests SessionRequest[]
+  chatThreads     ChatThread[]
 
   otpRequests     OtpRequest[]
   sessions        Session[]
@@ -356,6 +357,7 @@ model Institution {
   stats           CohortDailyStat[]
   alerts          Alert[]
   sessionRequests SessionRequest[]
+  chatThreads     ChatThread[]
 }
 
 enum StaffRole {
@@ -380,6 +382,7 @@ model StaffUser {
   appointments    Appointment[]
   requestedIn     SessionRequest[]   @relation("RequestPreferred")
   handledRequests SessionRequest[]   @relation("RequestHandler")
+  chatThreads     ChatThread[]
 
   @@index([institutionId, role])
 }
@@ -650,6 +653,52 @@ model SessionRequest {
 
   @@index([institutionId, status])
   @@index([studentId, status])
+}
+
+// ───────────────────────── P7: student–counsellor chat ─────────────────────────
+// One thread per student–counsellor pair. Message bodies are AES-256-GCM sealed like therapist notes.
+
+enum ChatRole {
+  STUDENT
+  THERAPIST
+}
+
+model ChatThread {
+  id                  String      @id @default(uuid())
+  institutionId       String
+  institution         Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  studentId           String
+  student             User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  therapistId         String
+  therapist           StaffUser   @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  createdAt           DateTime    @default(now())
+  lastMessageAt       DateTime?
+  studentLastReadAt   DateTime?
+  therapistLastReadAt DateTime?
+  // Set when a student message matched a crisis phrase; cleared when the counsellor reads the thread.
+  urgentAt            DateTime?
+
+  messages ChatMessage[]
+
+  @@unique([studentId, therapistId])
+  @@index([therapistId, lastMessageAt])
+}
+
+model ChatMessage {
+  id         String     @id @default(uuid())
+  threadId   String
+  thread     ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderRole ChatRole
+  // Client-generated id so a resend after a dropped connection is not stored twice.
+  clientId   String?
+  ciphertext String
+  iv         String
+  tag        String
+  flagged    Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+
+  @@unique([threadId, clientId])
+  @@index([threadId, createdAt])
 }
 
 // ───────────────────────── P4: trusted contacts and consent-first support prompts ─────────────────────────

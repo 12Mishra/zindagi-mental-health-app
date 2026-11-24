@@ -2,7 +2,7 @@
 // Mutations live in lib/actions.ts as server actions.
 import { CoreError, coreJson } from './core';
 import { dayKey } from './format';
-import type { Appointment, AppointmentDetail, Me, SessionRequest, Slot } from './types';
+import type { Appointment, AppointmentDetail, ChatThreadPage, ChatThreadSummary, Me, SessionRequest, Slot } from './types';
 
 const IST = '+05:30';
 const DAY_MS = 86_400_000;
@@ -68,4 +68,23 @@ export async function getSlots(weekStart: string): Promise<Slot[]> {
     }
   }
   return grid;
+}
+
+export const getChatThreads = () => coreJson<ChatThreadSummary[]>('/therapist/chat/threads');
+/** Unread chat messages for the nav badge; a core failure shows no badge rather than breaking the page. */
+export async function getChatUnread(): Promise<number> {
+  try {
+    return (await coreJson<{ unread: number }>('/therapist/chat/unread')).unread;
+  } catch (error) {
+    if (error instanceof CoreError) return 0;
+    throw error; // e.g. redirect() to sign-in
+  }
+}
+export async function getChatPage(threadId: string): Promise<ChatThreadPage | null> {
+  try {
+    return await coreJson<ChatThreadPage>(`/therapist/chat/threads/${encodeURIComponent(threadId)}/messages`);
+  } catch (error) {
+    if (error instanceof CoreError && error.status === 404) return null;
+    throw error;
+  }
 }

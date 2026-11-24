@@ -7,6 +7,7 @@ import { fmtDate, fmtTimeRange } from '@/lib/format';
 import type { Appointment, AppointmentStatus } from '@/lib/types';
 import { ModeChip, ReasonChip, StatusChip } from './Chips';
 import { ConfirmDialog } from './ConfirmDialog';
+import { MessageStudentButton } from './MessageStudentButton';
 import { IconChevronLeft } from './Icons';
 
 export function SessionHeader({ appt }: { appt: Appointment }) {
@@ -58,6 +59,7 @@ export function SessionHeader({ appt }: { appt: Appointment }) {
         <button type="button" className="btn danger" disabled={!open || pending} onClick={() => setConfirming(true)}>
           Cancel appointment
         </button>
+        <MessageStudentButton appointmentId={appt.id} className="btn ghost" />
       </div>
       <p className="sublabel" role="status" style={{ marginTop: 10, minHeight: 16 }}>
         {pending ? 'Saving…' : msg}

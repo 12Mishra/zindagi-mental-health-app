@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { CORE_URL, CoreError, coreJson } from './core';
 import { SESSION_COOKIE } from './session';
-import type { AppointmentStatus, SavedNote } from './types';
+import type { AppointmentStatus, ChatMessage, ChatThreadPage, ChatThreadSummary, ChatTicket, SavedNote } from './types';
 
 export type SignInState = { error?: string };
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
@@ -90,4 +90,28 @@ export async function declineRequest(id: string, note: string) {
 }
 export async function releaseRequest(id: string) {
   return guarded(() => coreJson<{ ok: true }>(`/therapist/requests/${enc(id)}/release`, { method: 'POST' }), '/requests');
+}
+
+// ── Chat ──
+// The browser never holds the counsellor's session token: it asks for a one-time socket ticket here.
+export async function chatTicket() {
+  return guarded(() => coreJson<ChatTicket>('/therapist/chat/ticket', { method: 'POST' }));
+}
+export async function chatThreads() {
+  return guarded(() => coreJson<ChatThreadSummary[]>('/therapist/chat/threads'));
+}
+export async function chatPage(threadId: string, before?: string) {
+  return guarded(() => coreJson<ChatThreadPage>(`/therapist/chat/threads/${enc(threadId)}/messages${before ? `?before=${enc(before)}` : ''}`));
+}
+export async function sendChat(threadId: string, body: string, clientId: string) {
+  return guarded(() => coreJson<{ message: ChatMessage }>(`/therapist/chat/threads/${enc(threadId)}/messages`, { method: 'POST', body: { body, clientId } }));
+}
+export async function markChatRead(threadId: string) {
+  return guarded(() => coreJson<{ ok: true; at: string }>(`/therapist/chat/threads/${enc(threadId)}/read`, { method: 'POST' }));
+}
+/** Opens (or reuses) the chat with the student behind an appointment or request, then goes to it. */
+export async function openChat(ref: { appointmentId?: string; requestId?: string }): Promise<ActionResult<never>> {
+  const res = await guarded(() => coreJson<{ threadId: string }>('/therapist/chat/threads', { method: 'POST', body: ref }));
+  if (!res.ok) return res;
+  redirect(`/messages?t=${enc(res.data.threadId)}`);
 }

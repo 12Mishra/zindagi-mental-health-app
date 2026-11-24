@@ -7,6 +7,7 @@ import { confirmRequest, declineRequest, proposeTime, releaseRequest } from '@/l
 import { fmtShortDate, fmtStamp, fmtTime, MODE_LABEL } from '@/lib/format';
 import type { SessionRequest } from '@/lib/types';
 import { ConfirmDialog } from './ConfirmDialog';
+import { MessageStudentButton } from './MessageStudentButton';
 
 type Panel = null | 'propose' | 'decline';
 
@@ -119,6 +120,7 @@ export function RequestCard({ req }: { req: SessionRequest }) {
               Pass to another counsellor
             </button>
           )}
+          <MessageStudentButton requestId={req.id} className="btn ghost" />
           <button type="button" className="btn danger" disabled={pending} onClick={() => setPanel(panel === 'decline' ? null : 'decline')} aria-expanded={panel === 'decline'}>
             Decline
           </button>

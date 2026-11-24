@@ -79,3 +79,22 @@ export type SessionRequest = {
   appointmentId: string | null;
   createdAt: string;
 };
+
+// ── Chat ──
+export type ChatRole = 'STUDENT' | 'THERAPIST';
+export type ChatMessage = { id: string; threadId: string; from: ChatRole; body: string; clientId: string | null; createdAt: string; flagged?: boolean };
+export type ChatThreadSummary = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  lastMessage: { from: ChatRole; body: string; createdAt: string } | null;
+  lastMessageAt: string | null;
+  unread: number;
+  urgent?: boolean;
+};
+export type ChatThreadPage = {
+  thread: { id: string; title: string; subtitle: string | null; otherLastReadAt: string | null; urgent?: boolean };
+  messages: ChatMessage[];
+  hasMore: boolean;
+};
+export type ChatTicket = { ticket: string; expiresAt: string; path: string };

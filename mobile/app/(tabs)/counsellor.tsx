@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
+import { fmtMsgTime, listChatContacts, listChatThreads, openChatThread, useChatEvents, type ChatContact, type ChatThread } from '@/lib/chat-api';
 import {
   acceptProposal, cancelAppointment, cancelRequest, createRequest, FIRST_HOUR, fmtDateNum, fmtDay, fmtHour, fmtSlot, fmtTime,
   fmtWeekday, getAvailability, hourStart, LAST_START_HOUR, listAppointments, listRequests, MODE_LABEL, offerNewTimes, officeDays,
@@ -30,6 +31,8 @@ export default function CounsellorScreen() {
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [requests, setRequests] = useState<SessionRequest[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [threads, setThreads] = useState<ChatThread[]>([]);
+  const [contacts, setContacts] = useState<ChatContact[]>([]);
 
   const [view, setView] = useState<View_>('home');
   const [rollNumber, setRollNumber] = useState('');
@@ -46,7 +49,10 @@ export default function CounsellorScreen() {
   const load = useCallback(async () => {
     if (!token) { router.replace('/login'); return; }
     try {
-      const [av, rq, ap] = await Promise.all([getAvailability(token), listRequests(token), listAppointments(token)]);
+      const [av, rq, ap, th, ct] = await Promise.all([
+        getAvailability(token), listRequests(token), listAppointments(token), listChatThreads(token), listChatContacts(token),
+      ]);
+      setThreads(th); setContacts(ct);
       setAvailability(av); setRequests(rq); setAppointments(ap); setError(''); setNow(Date.now());
       // Prefill the form from the last request, like a browser remembers a form.
       const last = rq[0];
@@ -60,6 +66,22 @@ export default function CounsellorScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const days = useMemo(() => officeDays(10, now), [now]);
+
+  // Keep the Messages section live: a new message or a counsellor starting a chat refreshes the list.
+  useChatEvents(e => {
+    if ((e.type === 'message' || e.type === 'thread') && token) {
+      void listChatThreads(token).then(setThreads).catch(() => {});
+      if (e.type === 'thread') void listChatContacts(token).then(setContacts).catch(() => {});
+    }
+  });
+
+  const openChat = (therapistId: string) => run(async () => {
+    if (!token) return;
+    const existing = contacts.find(c => c.therapistId === therapistId)?.threadId;
+    const threadId = existing ?? (await openChatThread(token, therapistId)).threadId;
+    router.push(`/chat/${threadId}` as never);
+  });
+  const contactByName = (name: string) => contacts.find(c => c.name === name);
   const openRequest = requests.find(r => r.status === 'PENDING' || r.status === 'PROPOSED') ?? null;
   const upcoming = appointments.filter(a => a.status === 'CONFIRMED' && new Date(a.endsAt).getTime() > now)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
@@ -294,7 +316,12 @@ export default function CounsellorScreen() {
           <TouchableOpacity style={styles.danger} disabled={busy} onPress={() => void cancelSession(a)}><Text style={styles.dangerText}>Cancel session</Text></TouchableOpacity>
           <TouchableOpacity style={styles.ghost} onPress={() => setConfirmCancel(null)}><Text style={styles.ghostText}>Keep</Text></TouchableOpacity>
         </View>
-      </View> : <TouchableOpacity onPress={() => setConfirmCancel(a.id)}><Text style={styles.linkDanger}>Cancel session</Text></TouchableOpacity>}
+      </View> : <View style={styles.row}>
+        {contactByName(a.therapistName) && <TouchableOpacity onPress={() => void openChat(contactByName(a.therapistName)!.therapistId)}>
+          <Text style={styles.link}>Message {a.therapistName}</Text>
+        </TouchableOpacity>}
+        <TouchableOpacity onPress={() => setConfirmCancel(a.id)}><Text style={styles.linkDanger}>Cancel session</Text></TouchableOpacity>
+      </View>}
     </View>)}
 
     {openRequest && renderRequest(openRequest)}
@@ -313,6 +340,30 @@ export default function CounsellorScreen() {
       <TouchableOpacity style={styles.primary} onPress={startForm}><Text style={styles.primaryText}>Book or request a session</Text></TouchableOpacity>
     </>}
     {!openRequest && upcoming.length >= 2 && <Text style={styles.meta}>You have two upcoming sessions, the most you can book at once.</Text>}
+
+    {(threads.length > 0 || contacts.length > 0) && <>
+      <Text style={styles.section}>Messages</Text>
+      {threads.map(t => <TouchableOpacity key={t.id} style={styles.thread} onPress={() => router.push(`/chat/${t.id}` as never)}
+        accessibilityLabel={`Chat with ${t.title}${t.unread ? `, ${t.unread} unread` : ''}`}>
+        <View style={styles.avatar}><MaterialIcons name="chat-bubble-outline" size={18} color={ZColors.forest} /></View>
+        <View style={{ flex: 1 }}>
+          <View style={styles.row}>
+            <Text style={[styles.cardTitleSm, { flex: 1 }]} numberOfLines={1}>{t.title}</Text>
+            {t.lastMessageAt && <Text style={styles.meta}>{fmtMsgTime(t.lastMessageAt)}</Text>}
+          </View>
+          <View style={styles.row}>
+            <Text style={[styles.meta, { flex: 1 }, t.unread > 0 && { color: ZColors.textPrimary, fontWeight: '600' }]} numberOfLines={1}>
+              {t.lastMessage ? `${t.lastMessage.from === 'STUDENT' ? 'You: ' : ''}${t.lastMessage.body}` : 'No messages yet'}
+            </Text>
+            {t.unread > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{t.unread}</Text></View>}
+          </View>
+        </View>
+      </TouchableOpacity>)}
+      {contacts.filter(c => !c.threadId).map(c => <TouchableOpacity key={c.therapistId} style={styles.secondary} disabled={busy} onPress={() => void openChat(c.therapistId)}>
+        <Text style={styles.secondaryText}>Message {c.name}</Text>
+      </TouchableOpacity>)}
+      <Text style={styles.meta}>Chat with counsellors you have a request or session with. Replies come during office hours; it isn’t for emergencies.</Text>
+    </>}
 
     {availability && availability.counsellors.length > 0 && <>
       <Text style={styles.section}>Counsellors</Text>
@@ -412,6 +463,10 @@ const styles = StyleSheet.create({
   ghost: { paddingVertical: 10, alignItems: 'center', paddingHorizontal: 10 },
   ghostText: { color: ZColors.textSecondary, fontWeight: '600' },
   linkDanger: { color: ZColors.coralDeep, fontWeight: '700', fontSize: 14 },
+  link: { color: ZColors.olive, fontWeight: '700', fontSize: 14 },
+  thread: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#fff', borderRadius: ZRadius.card, padding: 14, ...ZShadow.subtle },
+  badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, backgroundColor: ZColors.coralDeep, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   confirm: { backgroundColor: ZColors.coralLight, borderRadius: ZRadius.small, padding: 12, gap: 8 },
   confirmText: { color: ZColors.textPrimary, fontSize: 14 },
   danger: { backgroundColor: ZColors.coralDeep, borderRadius: ZRadius.pill, paddingHorizontal: 20, paddingVertical: 10 },

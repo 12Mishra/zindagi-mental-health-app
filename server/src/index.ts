@@ -45,6 +45,11 @@ app.use('/staff', staffRouter);
 import { adminRouter } from './admin/admin.routes';
 app.use('/admin', adminRouter);
 
+// Chat is mounted before /therapist so it has its own auth instead of falling through the therapist router.
+import { studentChatRouter, therapistChatRouter } from './chat/chat.routes';
+app.use('/therapist/chat', therapistChatRouter);
+app.use('/api/chat', requireAuth as any, studentChatRouter as any);
+
 import { therapistRouter } from './booking/therapist.routes';
 app.use('/therapist', therapistRouter);
 
@@ -74,6 +79,8 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 
 app.use(errorHandler);
 
-app.listen(config.port,"0.0.0.0", () => {
-  console.log(`Server listening on http://localhost:${config.port}`);
+import { attachChatSocket, CHAT_WS_PATH } from './chat/chat.hub';
+const server = app.listen(config.port,"0.0.0.0", () => {
+  console.log(`Server listening on http://localhost:${config.port} (chat socket on ${CHAT_WS_PATH})`);
 });
+attachChatSocket(server);

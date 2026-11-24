@@ -1,14 +1,14 @@
 import { TopBar } from '@/components/TopBar';
-import { getMe, getRequests } from '@/lib/data';
+import { getChatUnread, getMe, getRequests } from '@/lib/data';
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const [me, requests] = await Promise.all([getMe(), getRequests('open')]);
+  const [me, requests, unread] = await Promise.all([getMe(), getRequests('open'), getChatUnread()]);
   // Requests that need this counsellor's action (a proposal they sent is waiting on the student instead).
   const waiting = requests.filter((r) => r.status === 'PENDING').length;
   return (
     <>
       <a href="#main" className="sr-only">Skip to content</a>
-      <TopBar name={me.displayName} waiting={waiting} />
+      <TopBar name={me.displayName} waiting={waiting} unread={unread} />
       <main id="main" className="container">{children}</main>
     </>
   );

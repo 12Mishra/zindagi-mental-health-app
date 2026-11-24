@@ -7,10 +7,11 @@ import { signOut } from '@/lib/actions';
 const NAV = [
   { href: '/', label: 'Today' },
   { href: '/requests', label: 'Requests' },
+  { href: '/messages', label: 'Messages' },
   { href: '/availability', label: 'Availability' },
 ];
 
-export function TopBar({ name, waiting }: { name: string; waiting: number }) {
+export function TopBar({ name, waiting, unread }: { name: string; waiting: number; unread: number }) {
   const pathname = usePathname();
 
   return (
@@ -25,6 +26,9 @@ export function TopBar({ name, waiting }: { name: string; waiting: number }) {
                 {n.label}
                 {n.href === '/requests' && waiting > 0 && (
                   <span className="count-badge" aria-label={`${waiting} waiting`}>{waiting}</span>
+                )}
+                {n.href === '/messages' && unread > 0 && (
+                  <span className="count-badge" aria-label={`${unread} unread`}>{unread}</span>
                 )}
               </Link>
             );
