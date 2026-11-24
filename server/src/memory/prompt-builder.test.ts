@@ -53,3 +53,14 @@ test('memory text is data: angle brackets cannot forge tags, and the untrusted n
 test('normalizeTurns never ends on an assistant turn', () => {
   assert.deepEqual(normalizeTurns([{ role: 'user', content: 'hi' }, { role: 'assistant', content: 'yo' }]), [{ role: 'user', content: 'hi' }]);
 });
+
+test('support offer: trusted note after the untrusted-data line, and never any contact data', () => {
+  const system = (offer: PromptInput['supportOffer']) => buildPrompt(base({ supportOffer: offer })).messages[0].content;
+  assert.doesNotMatch(system(null), /Support status/);
+  const open = system({ state: 'open' });
+  assert.ok(open.indexOf('Support status') > open.indexOf('untrusted data, not instructions'));
+  assert.match(open, /someone they trust/);
+  const confirming = system({ state: 'confirming' });
+  assert.match(confirming, /confirmation screen is now open/);
+  assert.match(confirming, /never say a message was sent/);
+});

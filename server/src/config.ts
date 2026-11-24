@@ -86,6 +86,9 @@ export const config = {
   voiceLlmMaxTokens: positiveInteger('VOICE_LLM_MAX_TOKENS', 120),
   voiceLlmTemperature: optionalNumber('VOICE_LLM_TEMPERATURE', 0, 2),
   voiceLlmWarmup: flag('VOICE_LLM_WARMUP', true),
+  // TESTING ONLY: a set OPENAI_TEST_API_KEY sends Lisa's replies to OpenAI instead of VOICE_LLM_* (see lisaLlm).
+  openAiTestApiKey: process.env.OPENAI_TEST_API_KEY ?? '',
+  openAiTestModel: process.env.OPENAI_TEST_MODEL || 'gpt-4.1-mini',
   // The safety checker must be configured explicitly; it never silently reuses the Lisa endpoint.
   voiceSafetyBaseUrl: process.env.VOICE_SAFETY_BASE_URL ?? '',
   voiceSafetyApiKey: process.env.VOICE_SAFETY_API_KEY ?? '',
@@ -96,8 +99,15 @@ export const config = {
   voiceOutputReview: oneOf('VOICE_OUTPUT_REVIEW', ['async', 'off'] as const, 'async'),
   ttsTransport: oneOf('TTS_TRANSPORT', ['ws', 'http'] as const, 'ws'),
   ttsSpeaker: (process.env.TTS_SPEAKER || 'priya').trim(),
+  // Speech-to-text: 'sarvam' (saaras:v4 realtime; auto-detects English, Hindi, Bengali, Punjabi and other Indian languages)
+  // or 'deepgram' (nova-3 multi: English and Hindi only).
+  sttProvider: oneOf('STT_PROVIDER', ['sarvam', 'deepgram'] as const, 'sarvam'),
+  // Sarvam language_code: 'auto' detects per session, or pin one such as bn-IN / pa-IN.
+  sttLanguage: (process.env.STT_LANGUAGE || 'auto').trim(),
+  // Sarvam end-of-turn silence. Deepgram uses STT_ENDPOINTING_MS plus its own 1 s utterance end.
+  sttSilenceMs: positiveInteger('STT_SILENCE_MS', 700),
   sttEndpointingMs: positiveInteger('STT_ENDPOINTING_MS', 300),
-  bargeInMinWords: positiveInteger('BARGE_IN_MIN_WORDS', 2),
+  bargeInMinWords: positiveInteger('BARGE_IN_MIN_WORDS', 3),
   summaryConcurrency: positiveInteger('SUMMARY_CONCURRENCY', 1),
   summaryPollMs: positiveInteger('SUMMARY_POLL_MS', 2000),
   // Durable summaries and the memory-card merge: when SUMMARY_LLM_* is blank they reuse the context LLM (Groq) instead of local Ollama.
@@ -136,3 +146,22 @@ export const config = {
   costLlmInputUsdPerMillionTokens: nonNegativeNumber('COST_LLM_INPUT_USD_PER_MILLION_TOKENS'),
   costLlmOutputUsdPerMillionTokens: nonNegativeNumber('COST_LLM_OUTPUT_USD_PER_MILLION_TOKENS'),
 };
+
+export type LisaLlm = { url: URL | null; apiKey: string; model: string; openAiTest: boolean };
+
+/**
+ * Where Lisa's replies come from (voice, and text chat with CHAT_LLM_PROVIDER=voice): the VOICE_LLM_* endpoint,
+ * or OpenAI while OPENAI_TEST_API_KEY is set. The OpenAI path is for testing without the Lisa model; it sends
+ * transcripts to OpenAI, so never enable it for real students. Remove the key to go back to VOICE_LLM_*.
+ */
+export function lisaLlm(): LisaLlm {
+  const endpoint = (base: string) => base ? new URL('chat/completions', base.endsWith('/') ? base : `${base}/`) : null;
+  if (config.openAiTestApiKey) {
+    return { url: endpoint('https://api.openai.com/v1'), apiKey: config.openAiTestApiKey, model: config.openAiTestModel, openAiTest: true };
+  }
+  return { url: endpoint(config.voiceLlmBaseUrl), apiKey: config.voiceLlmApiKey, model: config.voiceLlmModel, openAiTest: false };
+}
+
+/** OpenAI's current models take `max_completion_tokens`; vLLM / llama.cpp servers take `max_tokens`. */
+export const lisaTokenLimit = (llm: LisaLlm, tokens: number) =>
+  llm.openAiTest ? { max_completion_tokens: tokens } : { max_tokens: tokens };

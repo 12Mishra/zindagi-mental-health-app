@@ -3,7 +3,7 @@ import { config } from '../config';
 import { turnLanguage } from '../voice/policy';
 import { ContextAgent, PartialBriefer } from './context-agent';
 import { getLongTerm } from './long-term';
-import { buildPrompt, type PromptResult } from './prompt-builder';
+import { buildPrompt, type PromptResult, type SupportOffer } from './prompt-builder';
 import { expireSession, loadSession, saveSession, emptySession, type SessionState } from './session-memory';
 import { embeddingsEnabled, search } from './vector';
 import type { LongTermMemory, MemoryLanguage, Turn } from './types';
@@ -26,6 +26,7 @@ export class SessionContext {
   private searched = false;
   private chain: Promise<void> = Promise.resolve();
   private closed = false;
+  private supportOffer: SupportOffer | null = null;
   private readonly briefer: PartialBriefer;
 
   constructor(readonly conversationId: string, readonly userId: string, private readonly systemPrompt: string,
@@ -72,7 +73,7 @@ export class SessionContext {
     const turns = this.working.slice(-config.workingTurns).map(e => ({ role: e.role, content: e.text() }));
     const result = buildPrompt({
       systemPrompt: this.systemPrompt, longTerm: this.longTerm, session: { ...this.state, turnBrief: brief },
-      turns, budgetTokens: config.promptTokenBudget,
+      turns, budgetTokens: config.promptTokenBudget, supportOffer: this.supportOffer,
     });
     return { ...result, promptBuildMs: Number((performance.now() - started).toFixed(2)) };
   }
@@ -81,6 +82,9 @@ export class SessionContext {
     if (this.closed || !this.deps.agent.enabled) return;
     this.briefer.onPartial(text);
   }
+
+  /** Server-side support-prompt status for the next prompts; null clears it. In memory only, never persisted. */
+  setSupportOffer(offer: SupportOffer | null) { this.supportOffer = offer; }
 
   recordRisk(level: string) {
     this.state.riskTimeline = [...this.state.riskTimeline, { turn: this.turn, level, at: Date.now() }].slice(-50);

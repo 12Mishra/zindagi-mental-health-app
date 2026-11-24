@@ -108,7 +108,7 @@ New: decide language **per turn, not per clause**, from the student's turn: Deva
 
 ### 4.8 Turn-taking and barge-in
 - Deepgram params (in `DeepgramStream.connect`): `endpointing` from config `STT_ENDPOINTING_MS` (default **300**), add `utterance_end_ms=1000`, keep `interim_results`, `vad_events`, `smart_format=true`. Treat `UtteranceEnd` as a turn end when no `speech_final` arrived (dedupe so one turn = one final).
-- **Barge-in no longer triggers on `SpeechStarted`.** While state is `generating`/`playing`, interrupt only when a partial transcript adds ≥ `BARGE_IN_MIN_WORDS` (default **2**) new words since Lisa started speaking. `SpeechStarted` may still emit the `speech_start` event to the client but must not call `interrupt()` during `playing`.
+- **Barge-in no longer triggers on `SpeechStarted`.** While state is `generating`/`playing`, interrupt only when a partial transcript adds ≥ `BARGE_IN_MIN_WORDS` (default **3**) new words since Lisa started speaking. `SpeechStarted` may still emit the `speech_start` event to the client but must not call `interrupt()` during `playing`.
 - Barge-in must: abort LLM, cancel the TTS session, clear the clause queue, bump generation, emit `interrupted` (existing logic), and record delivered text only.
 - Short backchannels ("hmm", "haan", "ok", "accha") under the word threshold must not interrupt; add a test.
 
@@ -147,7 +147,7 @@ VOICE_OUTPUT_REVIEW=async         # async | off
 TTS_TRANSPORT=ws                  # ws | http
 TTS_SPEAKER=shubh
 STT_ENDPOINTING_MS=300
-BARGE_IN_MIN_WORDS=2
+BARGE_IN_MIN_WORDS=3
 ```
 Validate all with the existing `positiveInteger`/enum style helpers; fail fast on invalid values.
 

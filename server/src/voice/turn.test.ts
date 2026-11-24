@@ -48,20 +48,29 @@ const runner = (deps: TurnDeps, regex: Triage = LOW, language: 'en' | 'hi' = 'en
   return { turn, abort };
 };
 
-test('clause 2 synthesis starts before clause 1 audio finishes and segment order is preserved', async () => {
+test('clauses released while a segment is synthesizing are spoken together as the next segment', async () => {
   const { h, deps } = harness({
-    tokens: ['That sounds ', 'really hard, ', 'and I am ', 'glad you said it. ', 'Do you want ', 'to tell me more?'],
+    tokens: ['That sounds really hard. ', 'I am glad you said it. ', 'Exams can feel so heavy. ', 'Do you want to tell me more?'],
     ttsChunks: 4, ttsChunkDelayMs: 15,
   });
   const { turn } = runner(deps);
   await turn.run();
-  assert.ok(h.log.indexOf('tts_start:1') < h.log.indexOf('tts_done:0'), h.log.join(','));
-  const segments = h.events.filter(e => e.type === 'response_text').map(e => e.segmentIndex);
-  assert.deepEqual(segments, [0, 1, 2]);
+  const texts = h.events.filter(e => e.type === 'response_text').map(e => e.text);
+  assert.deepEqual(texts, ['That sounds really hard.', 'I am glad you said it. Exams can feel so heavy. Do you want to tell me more?']);
+  // One TTS request at a time, so the second utterance carries every clause that arrived meanwhile.
+  assert.ok(h.log.indexOf('tts_start:1') > h.log.indexOf('tts_done:0'), h.log.join(','));
   const audioOrder = h.audio.map(chunk => chunk[0]);
   assert.deepEqual(audioOrder, [...audioOrder].sort());
   const ends = h.events.filter(e => e.type === 'audio_end').map(e => e.segmentIndex);
-  assert.deepEqual(ends, [0, 1, 2]);
+  assert.deepEqual(ends, [0, 1]);
+});
+
+test('a clause released while TTS is idle is spoken at once', async () => {
+  const { h, deps } = harness({ tokens: ['That sounds really hard. ', 'Tell me more about it, please.'], tokenDelayMs: 80, ttsChunks: 2, ttsChunkDelayMs: 5 });
+  const { turn } = runner(deps);
+  await turn.run();
+  const texts = h.events.filter(e => e.type === 'response_text').map(e => e.text);
+  assert.deepEqual(texts, ['That sounds really hard.', 'Tell me more about it, please.']);
 });
 
 test('gate holds Lisa audio until LLM triage says LOW', async () => {

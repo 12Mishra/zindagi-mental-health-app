@@ -10,6 +10,8 @@ export type VoiceEvent = {
   segmentIndex?: number;
   serviceMessage?: boolean;
   promptId?: string;
+  intent?: 'message' | 'call' | 'accept' | 'decline';
+  contactId?: string | null;
 };
 
 export type VoiceClient = {

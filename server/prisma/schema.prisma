@@ -642,6 +642,7 @@ model TrustedContact {
 enum PromptSource {
   VOICE
   CHECKIN
+  TEXT
 }
 
 enum PromptStatus {

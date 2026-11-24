@@ -7,7 +7,7 @@ import { ZColors } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
 import { getTodayMood } from '@/lib/daily-mood';
 import { deleteConversation, endConversation, issueVoiceTicket, startConversation } from '@/lib/conversation-api';
-import { requestSupportPromptCheck } from '@/lib/support-prompt-store';
+import { dismissSupportPrompt, requestSupportPromptCheck, type PromptHint } from '@/lib/support-prompt-store';
 import { createVoiceClient } from '@/lib/voice-client';
 import type { VoiceClient, VoiceEvent } from '@/lib/voice-client-types';
 
@@ -33,9 +33,17 @@ export default function VoiceScreen() {
   // A support prompt waits until Lisa has finished speaking (or a short fallback), then the root sheet fetches and shows it.
   const promptArmed = useRef(false);
   const promptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set when the student answers Lisa's offer out loud; cleared once the sheet opens with it.
+  const promptHint = useRef<PromptHint | undefined>(undefined);
+  const spokenDecline = useRef(false);
   const showPromptSoon = (ms: number) => {
     if (promptTimer.current) clearTimeout(promptTimer.current);
-    promptTimer.current = setTimeout(() => { promptArmed.current = false; requestSupportPromptCheck(); }, ms);
+    promptTimer.current = setTimeout(() => {
+      promptArmed.current = false;
+      const hint = promptHint.current;
+      promptHint.current = undefined;
+      requestSupportPromptCheck(hint);
+    }, ms);
   };
 
   const addLine = (role: Line['role'], text: string) => {
@@ -55,7 +63,19 @@ export default function VoiceScreen() {
         setState(event.serviceMessage ? 'listening' : 'responding'); setNotice(''); break;
       case 'audio_start': setState('responding'); setNotice('Lisa is speaking.'); break;
       case 'audio_end': setState('listening'); setNotice(''); if (promptArmed.current) showPromptSoon(800); break;
-      case 'support_prompt': promptArmed.current = true; showPromptSoon(5000); break;
+      case 'support_prompt': promptArmed.current = true; spokenDecline.current = false; showPromptSoon(5000); break;
+      case 'support_prompt_intent':
+        if (event.intent === 'decline') {
+          // "No" to Lisa: do not pop the sheet in their face; it is still there if they open the app later.
+          if (event.promptId) dismissSupportPrompt(event.promptId);
+          if (promptTimer.current) clearTimeout(promptTimer.current);
+          promptArmed.current = false; promptHint.current = undefined; spokenDecline.current = true;
+        } else if (event.intent) {
+          // Lisa is about to say "check your phone": open the sheet when she finishes, already on their choice.
+          promptHint.current = { intent: event.intent, contactId: event.contactId };
+          promptArmed.current = true; spokenDecline.current = false; showPromptSoon(5000);
+        }
+        break;
       case 'interrupted': setState('speaking'); setNotice('Lisa stopped speaking so you can continue.'); break;
       case 'risk':
         // LOW verdicts can arrive after Lisa already started speaking, so they never change the UI state.
@@ -68,7 +88,7 @@ export default function VoiceScreen() {
         if (event.code === 'generation_failed' || event.code === 'response_blocked' || event.code === 'turn_internal_error')
           setState('listening');
         break;
-      case 'session_end': if (promptTimer.current) clearTimeout(promptTimer.current); promptArmed.current = false; requestSupportPromptCheck(); setState('ended'); setNotice(''); setSummaryStatus(event.summaryStatus ?? 'none'); client.current = null; break;
+      case 'session_end': if (promptTimer.current) clearTimeout(promptTimer.current); promptArmed.current = false; if (!spokenDecline.current) requestSupportPromptCheck(promptHint.current); setState('ended'); setNotice(''); setSummaryStatus(event.summaryStatus ?? 'none'); client.current = null; break;
     }
   };
 

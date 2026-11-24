@@ -1,7 +1,8 @@
 import { config } from '../config';
 import { prisma } from '../db';
 import type { PromptSource, PromptStatus, RiskLevel } from '../generated/prisma/client';
-import { contactLabel, ContactsError, getOwnedContact } from './contacts.service';
+import { contactLabel, ContactsError, getOwnedContact, listContacts } from './contacts.service';
+import { classifyConsent, type ConsentIntent, type OfferContact } from './consent-intent';
 import { checkInTemplate, firstNameOf, isMessageLang, type MessageLang } from './templates';
 
 export const MAX_MESSAGES_PER_DAY = 3;
@@ -73,6 +74,32 @@ export async function getPendingPrompt(userId: string) {
     where: { userId, status: 'SHOWN', expiresAt: { gt: new Date() } }, orderBy: { createdAt: 'desc' },
     select: { id: true, level: true, source: true, expiresAt: true },
   });
+}
+
+export type OpenOffer = { promptId: string; expiresAt: Date; contacts: OfferContact[] };
+export type ConsentAnswer = { promptId: string; intent: ConsentIntent; contactId: string | null };
+
+/**
+ * The open prompt plus the student's people, for reading a spoken or typed answer to Lisa's offer. Null when nothing is
+ * open or the student has no one to reach (the sheet then offers Tele-MANAS). Server-internal: names stay in this module.
+ */
+export async function getOpenOffer(userId: string, prompt?: { id: string; expiresAt: Date } | null): Promise<OpenOffer | null> {
+  const open = prompt === undefined ? await getPendingPrompt(userId) : prompt;
+  if (!open) return null;
+  const contacts = (await listContacts(userId)).map(c => ({ id: c.id, name: c.name, relationship: c.relationship }));
+  return contacts.length ? { promptId: open.id, expiresAt: open.expiresAt, contacts } : null;
+}
+
+/**
+ * Reads what the student said about the open offer. Intent only: nothing is sent and the prompt is not answered; an
+ * accept just opens the confirm sheet on their phone. Logs the intent (never the words) so thresholds can be tuned.
+ */
+export function readConsent(userId: string, offer: OpenOffer, text: string, via: 'spoken' | 'typed'): ConsentAnswer | null {
+  const { intent, contactId } = classifyConsent(text, offer.contacts);
+  if (intent === 'none') return null;
+  void prisma.auditLog.create({ data: { actorId: userId, actorRole: 'STUDENT', action: `support_prompt.${via}_${intent}`,
+    targetType: 'SupportPrompt', targetId: offer.promptId } }).catch(() => {});
+  return { promptId: offer.promptId, intent, contactId: contactId ?? null };
 }
 
 /** The exact text a contact would receive, for the preview step. Built from the student's first name only. */

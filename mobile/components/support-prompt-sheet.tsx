@@ -7,7 +7,7 @@ import { getAuthSession } from '@/lib/auth-session';
 import {
   getPendingPrompt, listContacts, previewMessage, respondToPrompt, type Contact, type MessageLang, type PendingPrompt,
 } from '@/lib/contacts-api';
-import { onSupportPromptCheck } from '@/lib/support-prompt-store';
+import { isSupportPromptDismissed, onSupportPromptCheck, type PromptHint } from '@/lib/support-prompt-store';
 
 type Step = 'choose' | 'preview' | 'sent';
 
@@ -28,23 +28,34 @@ export function SupportPromptHost() {
   const [error, setError] = useState('');
   const checking = useRef(false);
 
-  const check = useCallback(async () => {
+  // A spoken "yes, message Priya" picks Priya and, for a message, goes straight to the preview. The Send tap is still theirs.
+  const applyHint = (list: Contact[], hint?: PromptHint) => {
+    const found = hint?.contactId ? list.findIndex(c => c.id === hint.contactId) : -1;
+    const index = found >= 0 ? found : 0;
+    setSelected(index); setShowOthers(false);
+    if (hint?.intent === 'message' && list[index]) void openPreview(lang);
+  };
+
+  const check = useCallback(async (hint?: PromptHint) => {
     const token = getAuthSession()?.session.token;
-    if (!token || checking.current || prompt) return;
+    if (prompt) { if (hint && step === 'choose') applyHint(contacts, hint); return; }
+    if (!token || checking.current) return;
     checking.current = true;
     try {
       const pending = await getPendingPrompt(token);
-      if (!pending) return;
-      setContacts(await listContacts(token).catch(() => []));
-      setSelected(0); setShowOthers(false); setStep('choose'); setError(''); setPrompt(pending);
+      if (!pending || (!hint && isSupportPromptDismissed(pending.id))) return;
+      const list = await listContacts(token).catch(() => []);
+      setContacts(list);
+      setStep('choose'); setError(''); setPrompt(pending);
+      applyHint(list, hint);
     } catch { /* offline or signed out: try again next time */ }
     finally { checking.current = false; }
-  }, [prompt]);
+  }, [prompt, contacts, step]);
 
   useEffect(() => {
     void check();
     const subscription = AppState.addEventListener('change', state => { if (state === 'active') void check(); });
-    const unsubscribe = onSupportPromptCheck(() => { void check(); });
+    const unsubscribe = onSupportPromptCheck(hint => { void check(hint); });
     return () => { subscription.remove(); unsubscribe(); };
   }, [check]);
 

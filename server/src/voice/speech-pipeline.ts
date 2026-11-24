@@ -9,8 +9,8 @@ export type SpeechSink = {
 type Segment = { index: number; text: string; chunks: Buffer[]; sent: number; started: boolean; done: boolean };
 
 /**
- * Consumer side of the hot path: synthesizes up to `prefetch` clauses at once so clause N+1 is requested
- * while clause N is still streaming, but forwards audio strictly in segment order.
+ * Consumer side of the hot path: synthesizes up to `prefetch` segments at once and forwards audio strictly in
+ * segment order. Lisa's turn pushes one segment at a time and batches the clauses that arrive meanwhile (see `onIdle`).
  */
 export class SpeechPipeline {
   private readonly segments: Segment[] = [];
@@ -22,9 +22,11 @@ export class SpeechPipeline {
   private error: Error | null = null;
   private settle: { resolve: () => void; reject: (error: Error) => void } | null = null;
   private readonly finished: Promise<void>;
+  private idleWaiters: Array<() => void> = [];
 
+  /** `onIdle` fires whenever no synthesis is running or queued, so the caller can hand over the text it batched meanwhile. */
   constructor(private readonly synthesize: Synthesize, private readonly sink: SpeechSink,
-    signal: AbortSignal, private readonly prefetch = 2) {
+    signal: AbortSignal, private readonly prefetch = 2, private readonly onIdle?: () => void) {
     this.finished = new Promise<void>((resolve, reject) => { this.settle = { resolve, reject }; });
     this.finished.catch(() => {});
     if (signal.aborted) this.cancel();
@@ -32,6 +34,15 @@ export class SpeechPipeline {
   }
 
   get cancelled() { return this.controller.signal.aborted; }
+
+  /** True while a segment is being synthesized or waits to be. */
+  get busy() { return this.inflight > 0 || this.nextStart < this.segments.length; }
+
+  /** Resolves once nothing is being synthesized (or the pipeline stopped). */
+  idle(): Promise<void> {
+    if (!this.busy || this.cancelled) return Promise.resolve();
+    return new Promise(resolve => this.idleWaiters.push(resolve));
+  }
 
   push(text: string, segmentIndex: number) {
     if (this.cancelled || this.ended) return;
@@ -50,6 +61,7 @@ export class SpeechPipeline {
     if (this.cancelled) return;
     this.controller.abort();
     this.settle?.resolve();
+    this.wakeIdle();
   }
 
   private pump() {
@@ -63,7 +75,7 @@ export class SpeechPipeline {
           this.forward();
         })
         .catch(error => this.fail(error))
-        .finally(() => { this.inflight--; this.pump(); this.check(); });
+        .finally(() => { this.inflight--; this.pump(); this.notifyIdle(); this.check(); });
     }
   }
 
@@ -94,7 +106,16 @@ export class SpeechPipeline {
     this.error = error instanceof Error ? error : new Error('tts_failed');
     this.controller.abort();
     this.settle?.reject(this.error);
+    this.wakeIdle();
   }
+
+  private notifyIdle() {
+    if (this.busy || this.cancelled) return;
+    this.onIdle?.();
+    if (!this.busy) this.wakeIdle();
+  }
+
+  private wakeIdle() { for (const resolve of this.idleWaiters.splice(0)) resolve(); }
 
   private check() {
     if (this.ended && !this.cancelled && this.head >= this.segments.length && this.inflight === 0) this.settle?.resolve();

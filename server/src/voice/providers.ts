@@ -1,5 +1,5 @@
 import WebSocket from 'ws';
-import { config } from '../config';
+import { config, lisaLlm, lisaTokenLimit } from '../config';
 
 export type SttCallbacks = {
   speechStart: () => void;
@@ -8,7 +8,89 @@ export type SttCallbacks = {
   error: (code: string) => void;
 };
 
-export class DeepgramStream {
+/** A live speech-to-text socket: PCM16 16 kHz mono frames in, one `final` per student turn out. */
+export interface SttStream {
+  connect(): Promise<void>;
+  send(frame: Buffer): boolean;
+  readonly open: boolean;
+  close(): void;
+}
+
+export function createSttStream(callbacks: SttCallbacks): SttStream {
+  return config.sttProvider === 'deepgram' ? new DeepgramStream(callbacks) : new SarvamSttStream(callbacks);
+}
+
+export const sttConfigured = () => Boolean(config.sttProvider === 'deepgram' ? config.deepgramApiKey : config.sarvamApiKey);
+
+/**
+ * Sarvam realtime streaming STT (saaras:v4), which covers English, Hindi, Bengali, Punjabi and other Indian languages.
+ * Protocol (docs.sarvam.ai asyncapi, channel /speech-to-text-realtime/ws):
+ * - client sends {"event":"audio_input","audio":"<base64 PCM16>"}, {"event":"ping"} and {"event":"end"};
+ * - server sends vad.speech_start, transcript.partial (text so far for the current utterance),
+ *   transcript.final (one per utterance after `silence_duration_ms` of silence) and error {code,is_fatal,message}.
+ * - `mode=codemix` keeps English words in Latin script and Indic words in their own script, so TTS can pick the voice by script.
+ * - The server closes the socket after 60 s without audio, so a ping is sent periodically.
+ */
+export class SarvamSttStream implements SttStream {
+  private socket: WebSocket | null = null;
+  private keepalive: NodeJS.Timeout | null = null;
+  constructor(private readonly callbacks: SttCallbacks,
+    private readonly endpoint = 'wss://api.sarvam.ai/speech-to-text-realtime/ws') {}
+
+  async connect() {
+    if (!config.sarvamApiKey) throw new Error('stt_not_configured');
+    const url = new URL(this.endpoint);
+    for (const [key, value] of Object.entries({
+      language_code: config.sttLanguage, model: 'saaras:v4', mode: 'codemix', stream_type: 'fast', endpointing: 'vad',
+      encoding: 'linear16', sample_rate: '16000', silence_duration_ms: String(config.sttSilenceMs),
+    })) url.searchParams.set(key, value);
+    const socket = new WebSocket(url, { headers: { 'Api-Subscription-Key': config.sarvamApiKey }, maxPayload: 256 * 1024 });
+    this.socket = socket;
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => { socket.terminate(); reject(new Error('stt_connect_timeout')); }, 7000);
+      socket.once('open', () => { clearTimeout(timer); resolve(); });
+      socket.once('error', () => { clearTimeout(timer); reject(new Error('stt_connect_failed')); });
+    });
+    socket.on('message', data => {
+      let event: any;
+      try { event = JSON.parse(data.toString()); } catch { return; }
+      const text = typeof event.text === 'string' ? event.text.trim().slice(0, 2000) : '';
+      if (event.event === 'vad.speech_start') this.callbacks.speechStart();
+      else if (event.event === 'transcript.partial' && text) this.callbacks.partial(text);
+      else if (event.event === 'transcript.final' && text) this.callbacks.final(text);
+      else if (event.event === 'error') {
+        console.warn(`[stt] sarvam ${event.code ?? 'error'}${event.is_fatal ? ' (fatal)' : ''}: ${String(event.message ?? '').slice(0, 200)}`);
+        if (event.is_fatal) this.callbacks.error('stt_disconnected');
+      }
+    });
+    socket.on('close', () => { this.stopKeepalive(); if (this.socket === socket) this.callbacks.error('stt_disconnected'); });
+    socket.on('error', () => this.callbacks.error('stt_disconnected'));
+    this.keepalive = setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ event: 'ping' }));
+    }, 20_000);
+  }
+
+  get open() { return this.socket?.readyState === WebSocket.OPEN; }
+
+  send(frame: Buffer) {
+    const socket = this.socket;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+    // Base64 JSON is ~1.4x the PCM size, so the backpressure bound is scaled to match Deepgram's 64 KB of raw audio.
+    if (socket.bufferedAmount > 96 * 1024) return false;
+    socket.send(JSON.stringify({ event: 'audio_input', audio: frame.toString('base64') }));
+    return true;
+  }
+
+  private stopKeepalive() { if (this.keepalive) clearInterval(this.keepalive); this.keepalive = null; }
+  close() {
+    this.stopKeepalive();
+    const socket = this.socket;
+    this.socket = null;
+    if (socket?.readyState === WebSocket.OPEN) { socket.send(JSON.stringify({ event: 'end' })); socket.close(); }
+  }
+}
+
+export class DeepgramStream implements SttStream {
   private socket: WebSocket | null = null;
   private finalized: string[] = [];
   private keepalive: NodeJS.Timeout | null = null;
@@ -99,16 +181,15 @@ export function alternateRoles(messages: LlmMessage[]): LlmMessage[] {
 
 export async function* streamLisa(messages: LlmMessage[], signal: AbortSignal,
   options: LisaStreamOptions = {}): AsyncGenerator<string> {
-  if (!config.voiceLlmBaseUrl || !config.voiceLlmModel) throw new Error('llm_not_configured');
-  const url = new URL('chat/completions', config.voiceLlmBaseUrl.endsWith('/')
-    ? config.voiceLlmBaseUrl : `${config.voiceLlmBaseUrl}/`);
+  const llm = lisaLlm();
+  if (!llm.url || !llm.model) throw new Error('llm_not_configured');
   options.onRequestSent?.();
-  const response = await fetch(url, {
+  const response = await fetch(llm.url, {
     method: 'POST', signal,
-    headers: { 'Content-Type': 'application/json', ...(config.voiceLlmApiKey ? { Authorization: `Bearer ${config.voiceLlmApiKey}` } : {}) },
+    headers: { 'Content-Type': 'application/json', ...(llm.apiKey ? { Authorization: `Bearer ${llm.apiKey}` } : {}) },
     // Temperature is only sent when configured, so the served model's own sampling settings (Lisa's Modelfile) apply.
-    body: JSON.stringify({ model: config.voiceLlmModel, messages: alternateRoles(messages), stream: true,
-      max_tokens: options.maxTokens ?? config.voiceLlmMaxTokens, stream_options: { include_usage: true },
+    body: JSON.stringify({ model: llm.model, messages: alternateRoles(messages), stream: true,
+      ...lisaTokenLimit(llm, options.maxTokens ?? config.voiceLlmMaxTokens), stream_options: { include_usage: true },
       ...(config.voiceLlmTemperature === null ? {} : { temperature: config.voiceLlmTemperature }) }),
   });
   if (!response.ok || !response.body) throw new Error(`llm_http_${response.status}`);
@@ -171,7 +252,8 @@ export class PcmAligner {
   end() { if (this.trailing.length) throw new Error('tts_unaligned_pcm'); }
 }
 
-export type TtsVoice = { languageCode: 'hi-IN' | 'en-IN'; speaker: string };
+export type TtsLanguageCode = 'hi-IN' | 'en-IN' | 'bn-IN' | 'pa-IN';
+export type TtsVoice = { languageCode: TtsLanguageCode; speaker: string };
 
 /** HTTP fallback (`TTS_TRANSPORT=http`): one streamed POST per clause. */
 export async function streamSarvamPcm(text: string, voice: TtsVoice, signal: AbortSignal, onChunk: (chunk: Buffer) => void) {

@@ -28,6 +28,9 @@ class PcmCapture extends AudioWorkletProcessor {
 registerProcessor('zindagi-pcm-capture', PcmCapture);
 `;
 
+// Audio scheduled this far ahead after a start or an underrun, so the next late chunk does not leave an audible gap.
+const PLAYBACK_LEAD_S = 0.15;
+
 const startupMessage = (code?: string) => {
   if (code === 'provider_not_configured') return 'Voice service is missing a provider or safety checker. Check server/.env and restart the voice service.';
   if (code === 'origin_not_allowed') return 'This browser origin is not allowed by the voice service. Check VOICE_ALLOWED_ORIGINS.';
@@ -76,7 +79,8 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     source.buffer = audio; source.connect(playbackContext.destination);
     playing.add(source);
     source.onended = () => playing.delete(source);
-    const when = Math.max(playbackContext.currentTime + 0.025, nextPlaybackTime);
+    // Back-to-back chunks play seamlessly; after a start or an underrun, rebuild a small cushion first.
+    const when = nextPlaybackTime > playbackContext.currentTime ? nextPlaybackTime : playbackContext.currentTime + PLAYBACK_LEAD_S;
     source.start(when);
     nextPlaybackTime = when + audio.duration;
     if (typeof envelope.segmentIndex === 'number') lastSource.set(envelope.segmentIndex, source);

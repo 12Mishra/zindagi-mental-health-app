@@ -57,6 +57,16 @@ export function turnLanguage(text: string): TurnLanguage {
   return new Set(text.toLowerCase().split(/[^a-z]+/).filter(word => ROMAN_HINDI.has(word))).size >= 2 ? 'hi' : 'en';
 }
 
+/**
+ * Sarvam voice for a turn, chosen by script so the accent never flips between clauses.
+ * Bengali and Gurmukhi script get their own voices; Roman Bengali/Punjabi cannot be told apart reliably and keep the Hindi/English voice.
+ */
+export function ttsLanguageCode(text: string): 'hi-IN' | 'en-IN' | 'bn-IN' | 'pa-IN' {
+  if (/[ঀ-৿]/u.test(text)) return 'bn-IN';
+  if (/[਀-੿]/u.test(text)) return 'pa-IN';
+  return turnLanguage(text) === 'hi' ? 'hi-IN' : 'en-IN';
+}
+
 // TODO(counsellor): the team's counsellor must approve the exact wording of these fixed messages before any pilot.
 export const SAFETY_CLARIFICATION: PolicyText = {
   en: 'I want to check on your safety. Are you in immediate danger or thinking of hurting yourself right now?',

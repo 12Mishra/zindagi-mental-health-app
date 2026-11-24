@@ -9,15 +9,21 @@ const run = (text: string, tokenSize = 3) => {
   return [...clauses, ...chunker.flush()];
 };
 
-test('first clause is emitted early at a comma after four words', () => {
+test('first clause waits for the sentence end instead of cutting at a comma', () => {
   const chunker = new ClauseChunker();
-  assert.deepEqual(chunker.push('That sounds really hard,'), []);
-  assert.deepEqual(chunker.push(' and'), ['That sounds really hard,']);
+  assert.deepEqual(chunker.push('That sounds really hard, and'), []);
+  assert.deepEqual(chunker.push(' I am here.'), []);
+  assert.deepEqual(chunker.push(' Tell'), ['That sounds really hard, and I am here.']);
 });
 
-test('first clause is cut at ten words without punctuation', () => {
-  assert.deepEqual(run('one two three four five six seven eight nine ten eleven twelve'),
-    ['one two three four five six seven eight nine ten', 'eleven twelve']);
+test('first clause is cut at fourteen words without punctuation', () => {
+  assert.deepEqual(run('one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen'),
+    ['one two three four five six seven eight nine ten eleven twelve thirteen fourteen', 'fifteen sixteen']);
+});
+
+test('an over-long sentence is split at its last comma, not mid-phrase', () => {
+  assert.deepEqual(run('When exams pile up and everyone expects so much from you, it can feel like there is no room left to breathe at all'),
+    ['When exams pile up and everyone expects so much from you,', 'it can feel like there is no room left to breathe at all']);
 });
 
 test('later clauses split at sentence ends after six words and flush the remainder', () => {

@@ -41,7 +41,7 @@ const LOW: Triage = { level: 'LOW', action: 'continue' };
 
 /**
  * One student turn on the hot path: regex triage → (LLM triage ∥ Lisa stream → clause chunker → release gate)
- * → sync regex review → TTS, with async output audits. Only the regex and the bounded gate wait sit between
+ * → sync regex review → clause batching → TTS, with async output audits. Only the regex and the bounded gate wait sit between
  * the end of speech and the first audio.
  */
 export class TurnRunner {
@@ -60,6 +60,11 @@ export class TurnRunner {
   private gate: ReleaseGate<string> | null = null;
   private readonly audits = new Set<Promise<void>>();
   private triageBlock: Triage | null = null;
+  /**
+   * Released clauses waiting for TTS. Each TTS request is a separate utterance to Sarvam (own intonation and edge
+   * silence), so clauses that arrive while one is being synthesized are spoken together as a single segment.
+   */
+  private pending: string[] = [];
 
   constructor(private readonly deps: TurnDeps, private readonly options: TurnOptions) {
     const abort = () => this.llmAbort.abort();
@@ -80,6 +85,7 @@ export class TurnRunner {
       console.warn(`[turn] ${this.options.trace.turnId} failed: ${error instanceof Error ? error.message : 'unknown'}`);
       this.gate?.close();
       this.llmAbort.abort();
+      this.pending = [];
       this.pipeline.cancel();
       this.deps.emit('error', { code: 'generation_failed', recoverable: true, message: 'generation failed' });
       if (!this.segments.length) await this.speakFixed(RESPONSE_UNAVAILABLE).catch(() => {});
@@ -117,7 +123,7 @@ export class TurnRunner {
     });
     const producer = this.produce(gate).catch(error => { if (!this.llmAbort.signal.aborted) throw error; });
     await Promise.all([producer, triage]);
-    await this.pipeline.finish();
+    await this.finishSpeech();
     if (this.triageBlock && this.live) {
       this.pipeline = this.createPipeline();
       this.speak(this.triageBlock.level === 'URGENT' ? URGENT_SUPPORT : SAFETY_CLARIFICATION, true);
@@ -154,7 +160,7 @@ export class TurnRunner {
     return triage;
   }
 
-  /** Gate released a clause: synchronous regex review, then TTS, then async audit. */
+  /** Gate released a clause: synchronous regex review, then batched TTS (see `pending`) with an async audit. */
   private release(clause: string) {
     if (!this.live || this.pipeline.cancelled) return;
     const review = reviewLisaSegment(clause, LOW);
@@ -162,13 +168,33 @@ export class TurnRunner {
       this.blocked = true;
       this.llmAbort.abort();
       this.gate?.close();
+      // Clauses approved before the blocked one are still spoken.
+      this.drain(true);
       this.deps.reviewed?.(this.segments.length, review);
       this.deps.emit('error', { code: 'response_blocked', recoverable: true, message: 'response blocked' });
       if (!this.segments.length) this.speak(RESPONSE_UNAVAILABLE, true);
       return;
     }
-    const index = this.speak(clause, false);
-    if (this.options.outputReview === 'async') this.audit(clause, index);
+    this.pending.push(clause);
+    this.drain();
+  }
+
+  /** Hands the batched clauses to TTS as one segment once the previous segment finished synthesizing. */
+  private drain(force = false) {
+    if (!this.pending.length || !this.live || this.pipeline.cancelled || (this.pipeline.busy && !force)) return;
+    const text = this.pending.join(' ');
+    this.pending = [];
+    const index = this.speak(text, false);
+    if (this.options.outputReview === 'async') this.audit(text, index);
+  }
+
+  /** Waits until every batched clause was handed to TTS, then for its audio. */
+  private async finishSpeech() {
+    while (this.pending.length && this.live && !this.pipeline.cancelled) {
+      await this.pipeline.idle();
+      this.drain();
+    }
+    await this.pipeline.finish();
   }
 
   private audit(clause: string, segmentIndex: number) {
@@ -190,6 +216,7 @@ export class TurnRunner {
   private cut() {
     this.llmAbort.abort();
     this.gate?.close();
+    this.pending = [];
     if (this.pipeline.cancelled) return;
     this.pipeline.cancel();
     this.deps.emit('interrupted', { reason: 'safety' });
@@ -237,7 +264,7 @@ export class TurnRunner {
         this.ttsChars += text.length;
         this.deps.emit('audio_end', { segmentIndex });
       },
-    }, signal);
+    }, signal, 2, () => this.drain());
     return pipeline;
   }
 }

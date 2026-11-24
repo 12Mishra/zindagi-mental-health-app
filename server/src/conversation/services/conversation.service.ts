@@ -10,6 +10,8 @@ import {
   POLICY_VERSION, RESPONSE_UNAVAILABLE, SAFETY_CLARIFICATION, URGENT_SUPPORT, turnLanguage,
 } from '../../voice/policy';
 import { assessStudentUtterance, checkLisaSegment } from '../../voice/safety-classifier';
+import { getOpenOffer, maybeCreatePrompt, readConsent, type ConsentAnswer } from '../../contacts/prompts.service';
+import type { SupportOffer } from '../../memory/prompt-builder';
 
 export async function startConversation(userId: string, moodBefore: string[], moodNote?: string, transcriptConsent = false, memoryConsent = true) {
   return prisma.conversation.create({
@@ -51,7 +53,11 @@ export async function processMessage(conversationId: string, userId: string, use
     });
   }
 
-  const triage = await assessStudentUtterance(content);
+  // An open prompt (from voice, a check-in or an earlier message) can be answered in words: intent only, never a send.
+  const [triage, open] = await Promise.all([assessStudentUtterance(content), getOpenOffer(userId).catch(() => null)]);
+  const supportPromptIntent: ConsentAnswer | null = open && readConsent(userId, open, content, 'typed');
+  const supportOffer: SupportOffer | null = !open || supportPromptIntent?.intent === 'decline' ? null
+    : { state: supportPromptIntent ? 'confirming' : 'open' };
   if (conversation.transcriptConsent) {
     await prisma.riskEvent.upsert({
       where: { conversationId_turnId_policyVersion: { conversationId, turnId: clientTurnId ?? `text-${userTurnNumber}`, policyVersion: POLICY_VERSION } },
@@ -82,6 +88,7 @@ export async function processMessage(conversationId: string, userId: string, use
     const prompt = buildPrompt({
       systemPrompt: withCheckin(SYSTEM_PROMPT, conversation.moodBefore, conversation.moodNote), longTerm,
       session: { ...emptySession(), ...session, turnBrief: null, recalled: [] }, turns, budgetTokens: config.promptTokenBudget,
+      supportOffer,
     });
     const generated = await chatWithLisa(prompt.messages.slice(1), prompt.messages[0].content);
     response = (await checkLisaSegment(generated, triage, undefined, content)).decision === 'ALLOW' ? generated : RESPONSE_UNAVAILABLE[language];
@@ -97,7 +104,24 @@ export async function processMessage(conversationId: string, userId: string, use
       },
     });
   }
-  return { response, turnNumber: userTurnNumber + 1 };
+  const supportPrompt = await offerTextSupport(userId, conversationId, triage.level, conversation.transcriptConsent);
+  return { response, turnNumber: userTurnNumber + 1, supportPrompt, supportPromptIntent };
+}
+
+/**
+ * Same rule as voice: URGENT offers at once, a second ELEVATED message in the conversation offers too. ELEVATED needs
+ * stored risk events to count, so without transcript consent only URGENT can offer. Consent-first: this never contacts anyone.
+ */
+async function offerTextSupport(userId: string, conversationId: string, level: string, transcriptConsent: boolean) {
+  try {
+    if (level === 'URGENT') return await maybeCreatePrompt(userId, 'TEXT', 'URGENT');
+    if (level !== 'ELEVATED' || !transcriptConsent) return null;
+    const elevated = await prisma.riskEvent.count({ where: { conversationId, level: 'ELEVATED' } });
+    return elevated >= 2 ? await maybeCreatePrompt(userId, 'TEXT', 'ELEVATED') : null;
+  } catch {
+    console.warn('[conversation] support_prompt_failed');
+    return null;
+  }
 }
 
 export async function endConversation(conversationId: string, userId: string, snapshot: SessionSnapshot | null = null) {

@@ -3,6 +3,9 @@ import { AudioContext, AudioManager, AudioRecorder } from 'react-native-audio-ap
 import type { VoiceClient, VoiceClientOptions, VoiceEvent } from './voice-client-types';
 import { PcmResampler } from './pcm-resampler';
 
+// Audio scheduled this far ahead after a start or an underrun, so the next late chunk does not leave an audible gap.
+const PLAYBACK_LEAD_S = 0.15;
+
 export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   let socket: WebSocket | null = null;
   let recorder: AudioRecorder | null = null;
@@ -52,7 +55,8 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     source.connect(context.destination);
     sources.add(source);
     source.onEnded = () => sources.delete(source);
-    const when = Math.max(context.currentTime + 0.03, nextPlaybackTime);
+    // Back-to-back chunks play seamlessly; after a start or an underrun, rebuild a small cushion first.
+    const when = nextPlaybackTime > context.currentTime ? nextPlaybackTime : context.currentTime + PLAYBACK_LEAD_S;
     source.start(when); nextPlaybackTime = when + buffer.duration;
     if (typeof event.segmentIndex === 'number') lastSource.set(event.segmentIndex, source);
   };

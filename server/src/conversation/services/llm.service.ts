@@ -1,4 +1,4 @@
-import { config } from '../../config';
+import { config, lisaLlm, lisaTokenLimit } from '../../config';
 import type { Topic } from '../../generated/prisma/client';
 import { parseTopics, TOPICS } from '../../insights/topics';
 
@@ -32,16 +32,16 @@ async function ollamaChat(messages: ChatMessage[], format?: 'json', signal?: Abo
 
 /** Non-streaming chat against the OpenAI-compatible VOICE_LLM_* endpoint (vLLM, Ollama /v1, Groq...). */
 async function openAiCompatibleChat(messages: ChatMessage[], signal?: AbortSignal) {
-  if (!config.voiceLlmBaseUrl || !config.voiceLlmModel) throw new Error('VOICE_LLM_BASE_URL and VOICE_LLM_MODEL must be set when CHAT_LLM_PROVIDER=voice.');
+  const llm = lisaLlm();
+  if (!llm.url || !llm.model) throw new Error('VOICE_LLM_BASE_URL and VOICE_LLM_MODEL (or OPENAI_TEST_API_KEY) must be set when CHAT_LLM_PROVIDER=voice.');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
   signal?.addEventListener('abort', () => controller.abort(), { once: true });
   try {
-    const url = new URL('chat/completions', config.voiceLlmBaseUrl.endsWith('/') ? config.voiceLlmBaseUrl : `${config.voiceLlmBaseUrl}/`);
-    const response = await fetch(url, {
+    const response = await fetch(llm.url, {
       method: 'POST', signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', ...(config.voiceLlmApiKey ? { Authorization: `Bearer ${config.voiceLlmApiKey}` } : {}) },
-      body: JSON.stringify({ model: config.voiceLlmModel, messages, stream: false, max_tokens: 160, temperature: 0.5 }),
+      headers: { 'Content-Type': 'application/json', ...(llm.apiKey ? { Authorization: `Bearer ${llm.apiKey}` } : {}) },
+      body: JSON.stringify({ model: llm.model, messages, stream: false, ...lisaTokenLimit(llm, 160), temperature: 0.5 }),
     });
     if (!response.ok) throw new Error(`Chat LLM returned HTTP ${response.status}`);
     const data = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };

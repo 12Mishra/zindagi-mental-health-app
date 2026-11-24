@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import WebSocket, { WebSocketServer } from 'ws';
-import { config } from '../config';
+import { config, lisaLlm } from '../config';
 import { prisma } from '../db';
 import { SYSTEM_PROMPT, withCheckin } from '../conversation/services/context.service';
 import { ContextAgent, createComplete } from '../memory/context-agent';
@@ -9,13 +9,13 @@ import { SessionContext } from '../memory/session-context';
 import { search } from '../memory/vector';
 import type { PromptResult } from '../memory/prompt-builder';
 import { endConversation } from '../conversation/services/conversation.service';
-import { maybeCreatePrompt } from '../contacts/prompts.service';
+import { getOpenOffer, maybeCreatePrompt, readConsent, type OpenOffer as Offer } from '../contacts/prompts.service';
 import { consumeVoiceTicket } from './tickets';
 import { AcousticAnalyzer } from './acoustic';
-import { DeepgramStream, streamLisa, warmLisa } from './providers';
+import { createSttStream, streamLisa, sttConfigured, warmLisa, type SttStream } from './providers';
 import { SpeechPipeline } from './speech-pipeline';
 import { assessStudentUtterance, checkLisaSegment } from './safety-classifier';
-import { POLICY_VERSION, reviewLisaSegment, triageStableUtterance, turnLanguage, type Review, type Triage } from './policy';
+import { POLICY_VERSION, reviewLisaSegment, triageStableUtterance, ttsLanguageCode, turnLanguage, type Review, type Triage } from './policy';
 import { TurnTrace } from './trace';
 import { createTtsSession, type TtsSession } from './tts-session';
 import { BargeInDetector } from './turn-taking';
@@ -26,6 +26,14 @@ type BuiltPrompt = PromptResult & { promptBuildMs: number };
 type ClientEvent = { type?: string; generationId?: string; segmentIndex?: number; ticket?: string; format?: unknown; v?: number };
 type State = 'connecting' | 'listening' | 'user_speaking' | 'endpointing' | 'generating' | 'playing' | 'interrupted' | 'ending' | 'closed';
 type TurnOutput = { id: string; segments: string[]; delivered: Set<number>; messageId: string | null };
+/** The support prompt open on the student's phone, mirrored here so a spoken answer to Lisa's offer can open the confirm sheet. */
+type OpenOffer = Offer & { state: 'open' | 'confirming' };
+
+/**
+ * Sarvam returns audio several times faster than real time, so a whole segment can queue up on a slow phone link.
+ * Only a link that is really stuck (~30 s of 24 kHz PCM16 waiting) fails the turn.
+ */
+const PLAYBACK_BUFFER_LIMIT = 1_500_000;
 
 const active = new Set<VoiceSession>();
 let admitting = 0;
@@ -47,7 +55,7 @@ const wss = new WebSocketServer({ port: config.voicePort, path: '/voice', maxPay
 class VoiceSession {
   readonly id = randomUUID();
   private auth: Auth | null = null;
-  private stt: DeepgramStream | null = null;
+  private stt: SttStream | null = null;
   private sttDropped = 0;
   private audibleUntil = 0;
   private tts: TtsSession | null = null;
@@ -72,6 +80,7 @@ class VoiceSession {
   /** Final-turn risk per turn id, for consent-first support prompts. The provisional partial never lands here. */
   private readonly promptedTurns = new Set<string>();
   private readonly elevatedTurns = new Set<string>();
+  private offer: OpenOffer | null = null;
   private startedAt = Date.now();
   private lastAuthCheck = Date.now();
   private checkingAuth = false;
@@ -139,7 +148,8 @@ class VoiceSession {
     try {
       const auth = await consumeVoiceTicket(ticket);
       if (!auth) { this.fail('invalid_ticket', false); return; }
-      if (!config.deepgramApiKey || !config.sarvamApiKey || !config.voiceLlmBaseUrl || !config.voiceLlmModel ||
+      const llm = lisaLlm();
+      if (!sttConfigured() || !config.sarvamApiKey || !llm.url || !llm.model ||
           !config.voiceSafetyBaseUrl || !config.voiceSafetyModel) {
         this.fail('provider_not_configured', false); return;
       }
@@ -147,7 +157,7 @@ class VoiceSession {
       // Long-term memory comes from the ticket-time Redis prefetch (DB fallback); the context agent is optional.
       this.ctx = await SessionContext.open(auth.conversationId, auth.userId, withCheckin(SYSTEM_PROMPT, auth.moodBefore, auth.moodNote),
         { agent: new ContextAgent(createComplete()), recall: search });
-      this.stt = new DeepgramStream({
+      this.stt = createSttStream({
         speechStart: () => this.onSpeechStart(),
         partial: text => this.onPartial(text),
         final: text => this.onFinal(text),
@@ -162,8 +172,10 @@ class VoiceSession {
       this.state = 'listening';
       this.startedAt = Date.now();
       this.event('ready', { format: { encoding: 'pcm_s16le', sampleRate: 16000, channels: 1 },
-        playback: { encoding: 'pcm_s16le', sampleRate: 24000, channels: 1 }, model: config.voiceLlmModel });
+        playback: { encoding: 'pcm_s16le', sampleRate: 24000, channels: 1 }, model: llm.model });
       if (config.voiceLlmWarmup) void warmLisa();
+      // A prompt from earlier (a check-in, a previous session) is offered here too.
+      void this.armOffer().catch(() => {});
       void this.greet();
     } catch { this.fail('voice_start_failed', false); }
     finally { admitting--; }
@@ -216,6 +228,8 @@ class VoiceSession {
     const output: TurnOutput = { id: this.generationId, segments: [], delivered: new Set(), messageId: null };
     this.output = output;
     const memoryTurn = this.ctx?.addUser(text) ?? 0;
+    // Before build(), so Lisa's reply to a spoken "yes" already knows the confirm sheet is open.
+    this.readSpokenConsent(text);
     const prompt = this.ctx?.build() ?? null;
     // Persisting the user row runs in parallel; it is only awaited before writing the assistant row.
     const commit = this.commitTail.then(() => this.persistUser(text, turnId));
@@ -266,7 +280,7 @@ class VoiceSession {
     const tts = this.tts;
     const { text, turnId, generation, output, prompt, signal, trace } = turn;
     const language = turnLanguage(text);
-    tts.setVoice({ languageCode: language === 'hi' ? 'hi-IN' : 'en-IN', speaker: config.ttsSpeaker });
+    tts.setVoice({ languageCode: ttsLanguageCode(text), speaker: config.ttsSpeaker });
     const ids = { turnId, generationId: output.id };
     const current = () => generation === this.generation;
     const messages = prompt.messages;
@@ -284,7 +298,7 @@ class VoiceSession {
       },
       sendAudio: pcm => {
         if (this.socket.readyState !== WebSocket.OPEN) return;
-        if (this.socket.bufferedAmount > 64 * 1024) throw new Error('playback_backpressure');
+        if (this.socket.bufferedAmount > PLAYBACK_BUFFER_LIMIT) throw new Error('playback_backpressure');
         this.socket.send(pcm, { binary: true });
         this.noteAudio(pcm.length);
       },
@@ -321,7 +335,48 @@ class VoiceSession {
     try {
       const prompt = await maybeCreatePrompt(auth.userId, 'VOICE', level);
       if (prompt && announce) this.event('support_prompt', { promptId: prompt.id, level: prompt.level });
+      if (prompt && announce) await this.armOffer(prompt);
     } catch { console.warn(`[voice] ${this.id} support_prompt_failed`); }
+  }
+
+  /** Lets Lisa offer the open prompt by voice. Only when the student has someone to reach; otherwise the sheet shows Tele-MANAS. */
+  private async armOffer(prompt?: { id: string; expiresAt: Date }) {
+    const auth = this.auth;
+    if (!auth || this.state === 'ending' || this.state === 'closed') return;
+    const offer = await getOpenOffer(auth.userId, prompt);
+    if (!offer || this.auth !== auth) return;
+    this.offer = { ...offer, state: 'open' };
+    this.ctx?.setSupportOffer({ state: 'open' });
+  }
+
+  private clearOffer() {
+    this.offer = null;
+    this.ctx?.setSupportOffer(null);
+  }
+
+  /**
+   * A spoken answer to Lisa's offer is intent, never consent: an accept only opens the confirm sheet (with that person
+   * picked) and a decline only stops Lisa offering again. Nothing is sent or recorded as answered until the student taps.
+   */
+  private readSpokenConsent(text: string) {
+    const offer = this.offer;
+    if (!offer) return;
+    if (Date.now() >= offer.expiresAt.getTime()) { this.clearOffer(); return; }
+    // A tap on the sheet (or expiry elsewhere) closes the prompt; catch up before the next turn.
+    void this.refreshOffer(offer);
+    // Lisa points at the confirm sheet once, on the turn right after the yes; after that she stops mentioning it.
+    if (offer.state !== 'open') { this.ctx?.setSupportOffer(null); return; }
+    const answer = readConsent(this.auth!.userId, offer, text, 'spoken');
+    if (!answer) return;
+    this.event('support_prompt_intent', answer);
+    if (answer.intent === 'decline') { this.clearOffer(); return; }
+    offer.state = 'confirming';
+    this.ctx?.setSupportOffer({ state: 'confirming' });
+  }
+
+  private async refreshOffer(offer: OpenOffer) {
+    const live = await prisma.supportPrompt.count({ where: { id: offer.promptId, status: 'SHOWN', expiresAt: { gt: new Date() } } }).catch(() => 1);
+    if (!live && this.offer === offer) this.clearOffer();
   }
 
   private emitTurnMetrics(runner: TurnRunner, trace: TurnTrace, generationId: string, interrupted: boolean, prompt: BuiltPrompt) {
@@ -414,7 +469,7 @@ class VoiceSession {
     const ids = { turnId: `${this.id}-greeting`, generationId: output.id };
     this.lastTurnId = ids.turnId;
     const current = () => generation === this.generation && !signal.aborted;
-    tts.setVoice({ languageCode: turnLanguage(text) === 'hi' ? 'hi-IN' : 'en-IN', speaker: config.ttsSpeaker });
+    tts.setVoice({ languageCode: ttsLanguageCode(text), speaker: config.ttsSpeaker });
     this.event('response_text', { ...ids, text, segmentIndex: 0, serviceMessage: false, greeting: true });
     const format = { encoding: 'pcm_s16le', sampleRate: 24000, channels: 1 };
     const pipeline = new SpeechPipeline((clause, index, onChunk, synthSignal) => tts.speak(clause, index, onChunk, synthSignal), {
@@ -423,7 +478,7 @@ class VoiceSession {
         if (!current()) return;
         this.event('audio_chunk', { ...ids, segmentIndex, chunkIndex, byteLength: pcm.length });
         if (this.socket.readyState !== WebSocket.OPEN) return;
-        if (this.socket.bufferedAmount > 64 * 1024) throw new Error('playback_backpressure');
+        if (this.socket.bufferedAmount > PLAYBACK_BUFFER_LIMIT) throw new Error('playback_backpressure');
         this.socket.send(pcm, { binary: true });
         this.noteAudio(pcm.length);
       },
@@ -501,3 +556,4 @@ wss.on('connection', (socket, request) => {
 });
 
 console.log(`Voice service listening on port ${config.voicePort}; max active sessions ${config.voiceMaxConversations}`);
+if (lisaLlm().openAiTest) console.warn(`[voice] TEST MODE: Lisa replies come from OpenAI (${config.openAiTestModel}), not VOICE_LLM_*. Unset OPENAI_TEST_API_KEY to go back.`);
