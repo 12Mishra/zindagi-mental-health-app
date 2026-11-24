@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 # Lisa v2 on a rented GPU.  Usage:  bash run.sh <setup|smoke|train|export|serve|all> [--model gemma4|qwen3-14b]
-# Needs: NVIDIA GPU (A100 80GB recommended), ~200 GB disk. Optional: HF_TOKEN, LISA_API_KEY (else one is generated).
+# Needs: NVIDIA GPU (A100 80GB recommended), ~200 GB disk, HF_TOKEN (required: Gemma is gated, accept its licence on Hugging Face first). Optional: LISA_API_KEY (else one is generated).
 set -euo pipefail
 cd "$(dirname "$0")"
 STEP="${1:-help}"; shift || true
 MODEL="gemma4"
-if [[ "${1:-}" == "--model" ]]; then MODEL="$2"; shift 2; fi
+# --model may appear anywhere after the step; every other argument is passed on to train.py unchanged.
+REST=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --model)   [[ $# -ge 2 ]] || { echo "--model needs a value (gemma4|qwen3-14b)"; exit 1; }
+               MODEL="$2"; shift 2 ;;
+    --model=*) MODEL="${1#--model=}"; shift ;;
+    *)         REST+=("$1"); shift ;;
+  esac
+done
+set -- ${REST[@]+"${REST[@]}"}
 export HF_HOME="${HF_HOME:-$PWD/hf_cache}"
 export PATH="$HOME/.local/bin:$PATH"
 

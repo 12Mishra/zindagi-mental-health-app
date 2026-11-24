@@ -1,0 +1,5 @@
+lisa_v2_gpu.zip
+out/
+hf_cache/
+logs/
+.venv*/
