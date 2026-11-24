@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "therapist",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "therapist", "run", "dev"],
+      "port": 3200
+    },
+    {
+      "name": "expo-web",
+      "url": "http://localhost:8081"
+    }
+  ]
+}

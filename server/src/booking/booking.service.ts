@@ -15,7 +15,32 @@ export const isTopic = (v: unknown): v is Topic => typeof v === 'string' && (TOP
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newSessionCode = () => 'ZK-' + Array.from({ length: 4 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
 
-async function studentInstitution(studentId: string): Promise<string> {
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/** Inserts the appointment row with a fresh session code, retrying on the rare code collision. */
+export async function createAppointmentRow(tx: Tx, data: {
+  slotId: string; studentId: string; therapistId: string; institutionId: string;
+  reason?: Topic | null; alertId?: string | null; consents?: ConsentScope[];
+}): Promise<string> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const created = await tx.appointment.create({
+        data: {
+          slotId: data.slotId, studentId: data.studentId, therapistId: data.therapistId, institutionId: data.institutionId,
+          sessionCode: newSessionCode(), reason: data.reason ?? null, alertId: data.alertId ?? null,
+          consents: { create: [...new Set(data.consents ?? [])].map(scope => ({ scope })) },
+        },
+        select: { id: true },
+      });
+      return created.id;
+    } catch (error) {
+      if (attempt < 5 && error instanceof Error && /Unique constraint|P2002/.test(error.message)) continue;
+      throw error;
+    }
+  }
+}
+
+export async function studentInstitution(studentId: string): Promise<string> {
   const user = await prisma.user.findUnique({ where: { id: studentId }, select: { institutionId: true } });
   if (!user?.institutionId) throw new BookingError('Your account is not linked to an institution with counselling.', 403);
   return user.institutionId;
@@ -72,22 +97,10 @@ export async function bookSlot(studentId: string, input: BookInput) {
     });
     if (claimed.count !== 1) throw new BookingError('That slot is no longer available.', 409);
     const slot = await tx.availabilitySlot.findUniqueOrThrow({ where: { id: input.slotId }, select: { therapistId: true } });
-    for (let attempt = 0; ; attempt++) {
-      try {
-        const created = await tx.appointment.create({
-          data: {
-            slotId: input.slotId, studentId, therapistId: slot.therapistId, institutionId, sessionCode: newSessionCode(),
-            reason: input.reason, alertId: input.alertId ?? null,
-            consents: { create: [...new Set(input.consents)].map(scope => ({ scope })) },
-          },
-          select: { id: true },
-        });
-        return created.id;
-      } catch (error) {
-        if (attempt < 5 && error instanceof Error && /Unique constraint|P2002/.test(error.message)) continue;
-        throw error;
-      }
-    }
+    return createAppointmentRow(tx, {
+      slotId: input.slotId, studentId, therapistId: slot.therapistId, institutionId,
+      reason: input.reason, alertId: input.alertId ?? null, consents: input.consents,
+    });
   });
   if (input.consents.includes('BRIEF')) await generateBrief(appointmentId, studentId, input.reason);
   return getStudentAppointment(studentId, appointmentId);
@@ -122,13 +135,16 @@ export async function listStudentAppointments(studentId: string) {
 }
 
 export async function cancelAsStudent(studentId: string, id: string) {
-  const a = await prisma.appointment.findFirst({ where: { id, studentId }, select: { id: true, status: true, slotId: true, slot: { select: { startsAt: true } } } });
+  const a = await prisma.appointment.findFirst({ where: { id, studentId }, select: { id: true, status: true, slotId: true, slot: { select: { startsAt: true, published: true } } } });
   if (!a) throw new BookingError('Appointment not found.', 404);
   if (a.status !== 'CONFIRMED') throw new BookingError('Only confirmed appointments can be cancelled.', 409);
   await prisma.$transaction([
     prisma.appointment.update({ where: { id }, data: { status: 'CANCELLED_STUDENT' } }),
-    // A cancelled future slot returns to the pool; a past one just stays booked history.
-    ...(a.slot.startsAt > new Date() ? [prisma.availabilitySlot.update({ where: { id: a.slotId }, data: { status: 'OPEN' as const } })] : []),
+    // A cancelled future slot the counsellor published returns to the pool; one made just for a
+    // request is withdrawn instead; a past one just stays booked history.
+    ...(a.slot.startsAt > new Date()
+      ? [prisma.availabilitySlot.update({ where: { id: a.slotId }, data: { status: a.slot.published ? 'OPEN' as const : 'REMOVED' as const } })]
+      : []),
   ]);
   return getStudentAppointment(studentId, id);
 }

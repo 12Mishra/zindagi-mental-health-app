@@ -1,21 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { signOut } from '@/lib/actions';
 
 const NAV = [
   { href: '/', label: 'Today' },
+  { href: '/requests', label: 'Requests' },
   { href: '/availability', label: 'Availability' },
 ];
 
-export function TopBar({ name }: { name: string }) {
+export function TopBar({ name, waiting }: { name: string; waiting: number }) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  function signOut() {
-    document.cookie = 'zindagi_therapist=; path=/; max-age=0; samesite=lax';
-    router.push('/login');
-  }
 
   return (
     <header className="topbar">
@@ -27,16 +23,19 @@ export function TopBar({ name }: { name: string }) {
             return (
               <Link key={n.href} href={n.href} aria-current={active ? 'page' : undefined}>
                 {n.label}
+                {n.href === '/requests' && waiting > 0 && (
+                  <span className="count-badge" aria-label={`${waiting} waiting`}>{waiting}</span>
+                )}
               </Link>
             );
           })}
         </nav>
         <div className="topbar-right">
-          <span className="chip">Therapist</span>
+          <span className="chip">Counsellor</span>
           <span className="user-name">{name}</span>
-          <button type="button" className="btn secondary small" onClick={signOut}>
-            Sign out
-          </button>
+          <form action={signOut}>
+            <button type="submit" className="btn secondary small">Sign out</button>
+          </form>
         </div>
       </div>
     </header>

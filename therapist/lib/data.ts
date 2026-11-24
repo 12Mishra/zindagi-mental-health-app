@@ -1,17 +1,17 @@
-// Mock data layer. Phase 2 replaces the bodies of these functions with calls to core
-// (CORE_API_URL); the signatures and return types stay the same.
+// Data layer: server-only reads from core (CORE_API_URL) with the signed-in counsellor's token.
+// Mutations live in lib/actions.ts as server actions.
+import { CoreError, coreJson } from './core';
 import { dayKey } from './format';
-import type { Appointment, AppointmentDetail, CareBrief, Identity, Slot } from './types';
-
-export const THERAPIST_NAME = 'Dr. Dullat';
+import type { Appointment, AppointmentDetail, Me, SessionRequest, Slot } from './types';
 
 const IST = '+05:30';
 const DAY_MS = 86_400_000;
+const HOUR_MS = 3_600_000;
+/** Counselling cell office hours: 1-hour sessions starting 09:00 to 16:00. */
+export const FIRST_HOUR = 9;
+export const LAST_START_HOUR = 16;
+const WEEKDAYS = 5;
 
-/** YYYY-MM-DD (IST) for today + offset days. */
-function istDay(offset: number): string {
-  return dayKey(new Date(Date.now() + offset * DAY_MS));
-}
 const at = (day: string, hhmm: string) => `${day}T${hhmm}:00${IST}`;
 
 /** Monday (IST) of the week containing `day`. */
@@ -23,155 +23,49 @@ export function mondayOf(day: string): string {
 export function addDays(day: string, n: number): string {
   return dayKey(new Date(new Date(`${day}T12:00:00${IST}`).getTime() + n * DAY_MS));
 }
-
-function build(): Appointment[] {
-  const today = istDay(0);
-  const tomorrow = istDay(1);
-  const later = istDay(3);
-  return [
-    {
-      id: 'apt-1',
-      sessionCode: 'ZK-7QF3',
-      pseudonym: '#KR047',
-      startsAt: at(today, '10:00'),
-      endsAt: at(today, '11:00'),
-      mode: 'IN_PERSON',
-      reason: 'Anxiety',
-      status: 'CONFIRMED',
-      consent: { brief: true, identity: true, contact: true },
-    },
-    {
-      id: 'apt-2',
-      sessionCode: 'ZK-M2X9',
-      pseudonym: '#TB112',
-      startsAt: at(today, '14:00'),
-      endsAt: at(today, '15:00'),
-      mode: 'PHONE',
-      reason: 'Academic',
-      status: 'CONFIRMED',
-      consent: { brief: true, identity: false, contact: false },
-    },
-    {
-      id: 'apt-3',
-      sessionCode: 'ZK-D84H',
-      pseudonym: '#QL230',
-      startsAt: at(tomorrow, '11:00'),
-      endsAt: at(tomorrow, '12:00'),
-      mode: 'IN_PERSON',
-      reason: 'Family',
-      status: 'CONFIRMED',
-      consent: { brief: false, identity: false, contact: false },
-    },
-    {
-      id: 'apt-4',
-      sessionCode: 'ZK-P5W1',
-      pseudonym: '#KR047',
-      startsAt: at(later, '15:00'),
-      endsAt: at(later, '16:00'),
-      mode: 'IN_PERSON',
-      reason: null,
-      status: 'CONFIRMED',
-      consent: { brief: true, identity: true, contact: false },
-    },
-  ];
+export function currentWeekStart(): string {
+  return mondayOf(dayKey(new Date()));
 }
 
-const BRIEFS: Record<string, CareBrief> = {
-  'apt-1': {
-    presenting:
-      'Persistent worry before exams, with trouble falling asleep on the nights before deadlines.',
-    themes: ['Exam anxiety', 'Sleep', 'Perfectionism'],
-    moodTrend: 'improving',
-    moodSeries: [4, 4, 5, 4, 6, 6, 7],
-    riskLevels: ['LOW', 'ELEVATED', 'LOW'],
-    whatHelped: ['Paced breathing before study blocks', 'Short evening walks', 'Talking with a hostel friend'],
-    openThreads: ['Upcoming viva on Friday', 'Unsure how to tell family about a lower grade'],
-    caution:
-      'This summary is AI-generated from conversations the student chose to share. Use it as a starting point and ask the student directly.',
-  },
-  'apt-2': {
-    presenting: 'Feeling behind in two courses and unsure whether to drop one.',
-    themes: ['Workload', 'Motivation'],
-    moodTrend: 'declining',
-    moodSeries: [7, 6, 6, 5, 5, 4, 4],
-    riskLevels: ['ELEVATED', 'ELEVATED'],
-    whatHelped: ['Writing a weekly plan', 'Study group on Sundays'],
-    openThreads: ['Deadline to withdraw from a course is next week'],
-    caution:
-      'Mood has dipped over the last two weeks. This summary is AI-generated and may miss context; check in gently.',
-  },
-  'apt-4': {
-    presenting: 'Follow-up on sleep and routine after the first session.',
-    themes: ['Sleep', 'Routine'],
-    moodTrend: 'stable',
-    moodSeries: [5, 6, 5, 5, 6, 5, 6],
-    riskLevels: ['LOW'],
-    whatHelped: ['Fixed wake-up time'],
-    openThreads: [],
-    caution: 'This summary is AI-generated and may be incomplete.',
-  },
-};
+export const getMe = () => coreJson<Me>('/staff/me');
 
-// Clearly fake identities.
-const IDENTITIES: Record<string, Identity> = {
-  'apt-1': { name: 'Test Student One', phone: '+91 00000 00001' },
-  'apt-4': { name: 'Test Student One' },
-};
-
-const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
-
-export async function getAppointments(): Promise<Appointment[]> {
-  await wait();
-  return build().sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-}
+export const getAppointments = () => coreJson<Appointment[]>('/therapist/appointments');
 
 export async function getAppointment(id: string): Promise<AppointmentDetail | null> {
-  await wait();
-  const appointment = build().find((a) => a.id === id);
-  if (!appointment) return null;
-  return {
-    appointment,
-    brief: appointment.consent.brief ? (BRIEFS[id] ?? null) : null,
-    identity: appointment.consent.identity ? (IDENTITIES[id] ?? null) : null,
-    notes:
-      id === 'apt-1'
-        ? []
-        : id === 'apt-4'
-          ? [
-              {
-                id: 'n-1',
-                createdAt: at(istDay(-7), '16:20'),
-                text: 'First session. Built rapport; agreed to try a fixed wake-up time.',
-              },
-            ]
-          : [],
-  };
+  try {
+    return await coreJson<AppointmentDetail>(`/therapist/appointments/${encodeURIComponent(id)}`);
+  } catch (error) {
+    if (error instanceof CoreError && error.status === 404) return null;
+    throw error;
+  }
 }
 
-/** Mon–Fri, hourly 10:00–16:00 for the week starting on `weekStart` (a Monday, YYYY-MM-DD). */
+export const getRequests = (scope: 'open' | 'all' = 'open') => coreJson<SessionRequest[]>(`/therapist/requests?scope=${scope}`);
+
+type CoreSlot = { id: string; startsAt: string; endsAt: string; status: Slot['status']; pseudonym?: string };
+
+/**
+ * A full Mon–Fri × office-hours grid for the week starting `weekStart` (a Monday, YYYY-MM-DD), day-major.
+ * Hours with no slot in core come back with `id: null` and status REMOVED (closed).
+ */
 export async function getSlots(weekStart: string): Promise<Slot[]> {
-  await wait(150);
-  const booked = new Map(build().map((a) => [`${dayKey(a.startsAt)}T${a.startsAt.slice(11, 16)}`, a.pseudonym]));
-  const slots: Slot[] = [];
-  for (let d = 0; d < 5; d++) {
+  const from = new Date(at(weekStart, '00:00'));
+  const to = new Date(from.getTime() + WEEKDAYS * DAY_MS);
+  const rows = await coreJson<CoreSlot[]>(`/therapist/slots?from=${from.toISOString()}&to=${to.toISOString()}`);
+  const now = Date.now();
+  const grid: Slot[] = [];
+  for (let d = 0; d < WEEKDAYS; d++) {
     const day = addDays(weekStart, d);
-    for (let h = 10; h <= 16; h++) {
-      const hh = String(h).padStart(2, '0');
-      const key = `${day}T${hh}:00`;
-      const pseudonym = booked.get(key);
-      const removed = h === 13 || (d === 4 && h >= 15);
-      slots.push({
-        id: `slot-${day}-${hh}`,
-        startsAt: at(day, `${hh}:00`),
-        endsAt: at(day, `${String(h + 1).padStart(2, '0')}:00`),
-        status: pseudonym ? 'BOOKED' : removed ? 'REMOVED' : 'OPEN',
-        pseudonym,
-      });
+    for (let h = FIRST_HOUR; h <= LAST_START_HOUR; h++) {
+      const startsAt = at(day, `${String(h).padStart(2, '0')}:00`);
+      const start = new Date(startsAt).getTime();
+      // Prefer a booked slot that starts in this hour, then any other slot starting in it.
+      const inHour = rows.filter(s => { const t = new Date(s.startsAt).getTime(); return t >= start && t < start + HOUR_MS; });
+      const slot = inHour.find(s => s.status === 'BOOKED') ?? inHour[0];
+      grid.push(slot
+        ? { id: slot.id, startsAt: slot.startsAt, endsAt: slot.endsAt, status: slot.status, pseudonym: slot.pseudonym, past: start <= now }
+        : { id: null, startsAt, endsAt: new Date(start + HOUR_MS).toISOString(), status: 'REMOVED', past: start <= now });
     }
   }
-  return slots;
-}
-
-export function currentWeekStart(): string {
-  return mondayOf(istDay(0));
+  return grid;
 }

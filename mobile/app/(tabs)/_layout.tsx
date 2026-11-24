@@ -52,6 +52,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="counsellor"
+        options={{
+          title: "Counsellor",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="support-agent" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="dashboard"
         options={{
           href: null,

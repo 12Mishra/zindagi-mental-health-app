@@ -4,6 +4,7 @@ import {
   BookingError, bookSlot, cancelAsStudent, isScope, isTopic, listOpenSlots, listOutreach, listStudentAppointments,
   getStudentAppointment, setConsent, updateOutreach, SCOPES,
 } from './booking.service';
+import { cancelStudentRequest, createRequest, getAvailability, listStudentRequests, respondToProposal } from './requests.service';
 
 /** Student-facing booking, consent and outreach routes. Mounted behind `requireAuth` (student bearer token). */
 export const studentBookingRouter = Router();
@@ -45,3 +46,17 @@ studentBookingRouter.post('/outreach/:id/:action', handle(async (req, res) => {
   await updateOutreach(req.auth!.userId, String(req.params.id), action);
   res.json({ ok: true });
 }));
+
+// ── Session requests (the in-app counselling request form) ──
+studentBookingRouter.get('/availability', handle(async (req, res) => { res.json(await getAvailability(req.auth!.userId)); }));
+studentBookingRouter.get('/requests', handle(async (req, res) => { res.json(await listStudentRequests(req.auth!.userId)); }));
+studentBookingRouter.post('/requests', handle(async (req, res) => {
+  const { rollNumber, branch, mode, therapistId, windows, slotId } = req.body ?? {};
+  res.status(201).json(await createRequest(req.auth!.userId, { rollNumber, branch, mode, therapistId, windows, slotId }));
+}));
+studentBookingRouter.post('/requests/:id/respond', handle(async (req, res) => {
+  const action = req.body?.action;
+  if (action !== 'accept' && action !== 'decline') throw new BookingError('action must be accept or decline.', 400);
+  res.json(await respondToProposal(req.auth!.userId, String(req.params.id), action === 'accept', req.body?.windows));
+}));
+studentBookingRouter.post('/requests/:id/cancel', handle(async (req, res) => { res.json(await cancelStudentRequest(req.auth!.userId, String(req.params.id))); }));

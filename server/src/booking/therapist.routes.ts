@@ -2,7 +2,9 @@ import { Router, type NextFunction, type Request, type Response } from 'express'
 import { prisma } from '../db';
 import type { AppointmentStatus, SessionMode } from '../generated/prisma/client';
 import { requireStaff, staffOf } from '../staff/staff.middleware';
+import { BookingError } from './booking.service';
 import { open, seal } from './crypto';
+import { listTherapistRequests, therapistConfirm, therapistDecline, therapistPropose, therapistRelease } from './requests.service';
 
 /**
  * Therapist API. Every query is scoped to the signed-in therapist, so another therapist's
@@ -32,16 +34,20 @@ const appointmentInclude = {
   slot: { select: { startsAt: true, endsAt: true, mode: true } },
   student: { select: { pseudonym: true } },
   consents: { select: { scope: true, revokedAt: true } },
+  request: { select: { rollNumber: true, branch: true } },
 } as const;
 
 type AppointmentWith = {
   id: string; sessionCode: string; reason: string | null; status: AppointmentStatus;
   slot: { startsAt: Date; endsAt: Date; mode: SessionMode }; student: { pseudonym: string | null }; consents: ConsentRow[];
+  request: { rollNumber: string; branch: string } | null;
 };
 
 const toAppointment = (a: AppointmentWith) => ({
   id: a.id, sessionCode: a.sessionCode, pseudonym: a.student.pseudonym ?? '#—', startsAt: a.slot.startsAt.toISOString(),
   endsAt: a.slot.endsAt.toISOString(), mode: a.slot.mode, reason: a.reason, status: a.status, consent: consentFlags(a.consents),
+  // Present when the session came through the request form: what the student entered there, nothing more.
+  student: a.request ? { rollNumber: a.request.rollNumber, branch: a.request.branch } : null,
 });
 
 therapistRouter.get('/appointments', guard(async (req, res) => {
@@ -145,4 +151,31 @@ therapistRouter.delete('/slots/:id', guard(async (req, res) => {
   const { count } = await prisma.availabilitySlot.updateMany({ where: { id: String(req.params.id), therapistId: staffId, status: 'OPEN' }, data: { status: 'REMOVED' } });
   if (!count) { res.status(409).json({ error: 'Slot not found or already booked.' }); return; }
   res.json({ ok: true });
+}));
+
+// ── Session requests inbox ──
+const requestGuard = (fn: (req: Request, res: Response) => Promise<void>) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    fn(req, res).catch(error => {
+      if (error instanceof BookingError) { res.status(error.status).json({ error: error.message }); return; }
+      next(error);
+    });
+  };
+
+therapistRouter.get('/requests', requestGuard(async (req, res) => {
+  const { staffId, institutionId } = staffOf(req);
+  res.json(await listTherapistRequests(staffId, institutionId, req.query.scope === 'all' ? 'all' : 'open'));
+}));
+
+therapistRouter.post('/requests/:id/:action', requestGuard(async (req, res) => {
+  const { staffId, institutionId } = staffOf(req);
+  const id = String(req.params.id);
+  const body = req.body ?? {};
+  switch (String(req.params.action)) {
+    case 'confirm': res.json(await therapistConfirm(staffId, institutionId, id, body.startsAt)); return;
+    case 'propose': res.json(await therapistPropose(staffId, institutionId, id, body.startsAt, body.note)); return;
+    case 'decline': res.json(await therapistDecline(staffId, institutionId, id, body.note)); return;
+    case 'release': res.json(await therapistRelease(staffId, institutionId, id)); return;
+    default: res.status(404).json({ error: 'Unknown action.' });
+  }
 }));

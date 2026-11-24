@@ -38,9 +38,10 @@ model User {
   pseudonym     String?      @unique
   checkinOptIn  Boolean      @default(false)
 
-  checkins     MoodCheckin[]
-  appointments Appointment[]
-  outreach     Outreach[]
+  checkins        MoodCheckin[]
+  appointments    Appointment[]
+  outreach        Outreach[]
+  sessionRequests SessionRequest[]
 
   otpRequests     OtpRequest[]
   sessions        Session[]
@@ -350,10 +351,11 @@ model Institution {
   pseudonymSalt String
   createdAt     DateTime @default(now())
 
-  users  User[]
-  staff  StaffUser[]
-  stats  CohortDailyStat[]
-  alerts Alert[]
+  users           User[]
+  staff           StaffUser[]
+  stats           CohortDailyStat[]
+  alerts          Alert[]
+  sessionRequests SessionRequest[]
 }
 
 enum StaffRole {
@@ -372,10 +374,12 @@ model StaffUser {
   active        Boolean     @default(true)
   createdAt     DateTime    @default(now())
 
-  sessions     StaffSession[]
-  profile      TherapistProfile?
-  slots        AvailabilitySlot[]
-  appointments Appointment[]
+  sessions        StaffSession[]
+  profile         TherapistProfile?
+  slots           AvailabilitySlot[]
+  appointments    Appointment[]
+  requestedIn     SessionRequest[]   @relation("RequestPreferred")
+  handledRequests SessionRequest[]   @relation("RequestHandler")
 
   @@index([institutionId, role])
 }
@@ -512,6 +516,8 @@ model AvailabilitySlot {
   endsAt      DateTime
   mode        SessionMode @default(IN_PERSON)
   status      SlotStatus  @default(OPEN)
+  // false = created to confirm a session request, so cancelling it must not publish it as open time.
+  published   Boolean     @default(true)
 
   appointments Appointment[]
 
@@ -546,6 +552,7 @@ model Appointment {
   consents ConsentGrant[]
   brief    CareBrief?
   notes    TherapistNote[]
+  request  SessionRequest?
 
   @@index([therapistId, status])
   @@index([studentId, status])
@@ -601,6 +608,48 @@ model AuditLog {
 
   @@index([targetType, targetId])
   @@index([actorId, at])
+}
+
+// ───────────────────────── P6: counselling session requests ─────────────────────────
+// Mirrors the counselling cell's request form: who (roll number, branch), when (1-hour windows) and
+// optionally which counsellor. It deliberately has no field for what the student wants to talk about.
+
+enum SessionRequestStatus {
+  PENDING // waiting for a counsellor
+  PROPOSED // a counsellor suggested another time; waiting for the student
+  CONFIRMED // became an Appointment
+  DECLINED // a counsellor closed it
+  CANCELLED // the student withdrew it
+  EXPIRED // every offered time passed
+}
+
+model SessionRequest {
+  id                   String               @id @default(uuid())
+  institutionId        String
+  institution          Institution          @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  studentId            String
+  student              User                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  rollNumber           String
+  branch               String
+  mode                 SessionMode          @default(IN_PERSON)
+  // null = any counsellor at the institution
+  preferredTherapistId String?
+  preferredTherapist   StaffUser?           @relation("RequestPreferred", fields: [preferredTherapistId], references: [id], onDelete: SetNull)
+  // Start times of the 1-hour windows the student can make.
+  windows              DateTime[]
+  status               SessionRequestStatus @default(PENDING)
+  handledById          String?
+  handledBy            StaffUser?           @relation("RequestHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  proposedStartsAt     DateTime?
+  // Short logistics note from the counsellor (room, reason for declining). Never clinical.
+  counsellorNote       String?
+  appointmentId        String?              @unique
+  appointment          Appointment?         @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([institutionId, status])
+  @@index([studentId, status])
 }
 
 // ───────────────────────── P4: trusted contacts and consent-first support prompts ─────────────────────────

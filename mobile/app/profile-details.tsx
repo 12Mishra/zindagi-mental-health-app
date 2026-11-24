@@ -25,7 +25,7 @@ export default function ProfileDetailsScreen() {
   }>();
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState('');
-  const [college, setCollege] = useState('');
+  const [college, setCollege] = useState("Thapar Institute of Engineering and Technology");
   const [sex, setSex] = useState('');
   const [error, setError] = useState('');
 

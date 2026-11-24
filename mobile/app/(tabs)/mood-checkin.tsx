@@ -324,6 +324,12 @@ export default function MoodCheckinScreen() {
           </>
         )}
 
+        {/* ── Campus counsellor ── */}
+        <TouchableOpacity style={s.crisisLink} onPress={() => router.push("/counsellor" as any)}>
+          <MaterialIcons name="support-agent" size={14} color={ZColors.olive} />
+          <Text style={[s.crisisLinkText, { color: ZColors.olive }]}>Talk to a campus counsellor</Text>
+        </TouchableOpacity>
+
         {/* ── Trusted contacts ── */}
         <TouchableOpacity style={s.crisisLink} onPress={() => router.push("/trusted-contacts" as any)}>
           <MaterialIcons name="favorite-border" size={14} color={ZColors.olive} />

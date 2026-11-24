@@ -289,3 +289,27 @@ dialog.dialog p { color: var(--text-2); margin-bottom: 18px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ── Session requests ── */
+.count-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: var(--r-pill); background: var(--alert-solid); color: #fff; font-size: 11px; font-weight: 700; line-height: 1; }
+.banner { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: var(--text); border: 1px solid var(--sage-mid); background: var(--chip-bg); }
+.banner:hover { border-color: var(--primary); }
+.form-error { min-height: 18px; margin: 0; color: var(--alert-fg); font-size: 13px; }
+.req-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.req-ident { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 4px 0 2px; }
+.req-ident div { display: flex; flex-direction: column; gap: 2px; }
+.req-ident strong { font-size: 15px; }
+.window-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+.window { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; border-radius: var(--r-small); border: 1.5px solid var(--border); background: var(--bg); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; min-height: 44px; }
+.window span { font-size: 11px; color: var(--text-muted); }
+.window.free { border-color: var(--sage-mid); }
+.window.free span { color: var(--positive); font-weight: 700; }
+.window.clash { cursor: not-allowed; opacity: 0.6; }
+.window.clash span { color: var(--alert-fg); }
+.window[aria-pressed='true'] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.window[aria-pressed='true'] span { color: var(--on-primary); }
+.inline-form { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; padding: 12px; margin-top: 12px; border-radius: var(--r-small); background: var(--bg); border: 1px solid var(--border); }
+.inline-form .field.wide, .inline-form .btn-row { grid-column: 1 / -1; }
+.select { appearance: auto; }
+.tabs { display: flex; gap: 6px; }
+.slot.past { opacity: 0.45; cursor: not-allowed; border-style: solid; }

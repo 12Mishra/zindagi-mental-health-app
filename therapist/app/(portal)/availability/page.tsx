@@ -19,7 +19,7 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
     <>
       <div>
         <h1 className="page-title">Availability</h1>
-        <p className="subtitle">Tap a slot to open or remove it. Booked slots are locked.</p>
+        <p className="subtitle">Open hours let students book you instantly in the app. You don&apos;t have to publish times: students can always send a request instead.</p>
       </div>
       <section className="card" aria-labelledby="week-h">
         <div className="card-head">

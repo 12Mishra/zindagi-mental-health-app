@@ -10,7 +10,7 @@ export function AppointmentCard({ appt, showDate }: { appt: Appointment; showDat
       <div className="appt-meta">
         {showDate && <span>{fmtShortDate(appt.startsAt)}</span>}
         <span className="mono">{appt.sessionCode}</span>
-        <span>{appt.pseudonym}</span>
+        {appt.student ? <span>Roll {appt.student.rollNumber} · {appt.student.branch}</span> : <span>{appt.pseudonym}</span>}
       </div>
       <div className="chips">
         <ReasonChip reason={appt.reason} />

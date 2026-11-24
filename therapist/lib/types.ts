@@ -17,6 +17,8 @@ export type Appointment = {
   reason: string | null;
   status: AppointmentStatus;
   consent: Consent;
+  /** What the student entered on the request form; null for sessions booked another way. */
+  student: { rollNumber: string; branch: string } | null;
 };
 
 export type MoodTrend = 'improving' | 'stable' | 'declining' | 'unknown';
@@ -34,11 +36,14 @@ export type CareBrief = {
 };
 
 export type Slot = {
-  id: string;
+  /** Core's slot id, or null for an hour with no slot yet (shown as closed). */
+  id: string | null;
   startsAt: string;
   endsAt: string;
   status: 'OPEN' | 'BOOKED' | 'REMOVED';
   pseudonym?: string;
+  /** In the past: cannot be opened or removed. */
+  past?: boolean;
 };
 
 export type Identity = { name: string; phone?: string };
@@ -50,4 +55,27 @@ export type AppointmentDetail = {
   brief: CareBrief | null;
   identity: Identity | null;
   notes: SavedNote[];
+};
+
+export type Me = { id: string; email: string; displayName: string; role: 'THERAPIST' | 'ADMIN'; institution: { name: string } | null };
+
+export type RequestStatus = 'PENDING' | 'PROPOSED' | 'CONFIRMED' | 'DECLINED' | 'CANCELLED' | 'EXPIRED';
+
+export type SessionRequest = {
+  id: string;
+  status: RequestStatus;
+  rollNumber: string;
+  branch: string;
+  mode: Appointment['mode'];
+  pseudonym: string;
+  /** The student named this counsellor. */
+  addressedToMe: boolean;
+  handledByMe: boolean;
+  handledBy: string | null;
+  /** Future windows the student offered; `free` = this counsellor has nothing booked then. */
+  windows: Array<{ startsAt: string; free: boolean }>;
+  proposedStartsAt: string | null;
+  counsellorNote: string | null;
+  appointmentId: string | null;
+  createdAt: string;
 };

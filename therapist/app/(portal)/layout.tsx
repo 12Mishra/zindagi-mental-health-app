@@ -1,11 +1,15 @@
 import { TopBar } from '@/components/TopBar';
-import { THERAPIST_NAME } from '@/lib/data';
+import { getMe, getRequests } from '@/lib/data';
 
-export default function PortalLayout({ children }: { children: React.ReactNode }) {
+export default async function PortalLayout({ children }: { children: React.ReactNode }) {
+  const [me, requests] = await Promise.all([getMe(), getRequests('open')]);
+  // Requests that need this counsellor's action (a proposal they sent is waiting on the student instead).
+  const waiting = requests.filter((r) => r.status === 'PENDING').length;
   return (
     <>
-      <TopBar name={THERAPIST_NAME} />
-      <main className="container">{children}</main>
+      <a href="#main" className="sr-only">Skip to content</a>
+      <TopBar name={me.displayName} waiting={waiting} />
+      <main id="main" className="container">{children}</main>
     </>
   );
 }

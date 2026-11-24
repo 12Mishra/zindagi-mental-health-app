@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { setAppointmentStatus } from '@/lib/actions';
 import { fmtDate, fmtTimeRange } from '@/lib/format';
 import type { Appointment, AppointmentStatus } from '@/lib/types';
 import { ModeChip, ReasonChip, StatusChip } from './Chips';
@@ -14,10 +15,17 @@ export function SessionHeader({ appt }: { appt: Appointment }) {
   const [msg, setMsg] = useState('');
   const open = status === 'CONFIRMED';
 
-  function change(next: AppointmentStatus, text: string) {
-    setStatus(next);
-    setMsg(text);
+  const [pending, start] = useTransition();
+
+  function change(next: 'COMPLETED' | 'NO_SHOW' | 'CANCELLED_THERAPIST', text: string) {
     setConfirming(false);
+    setMsg('');
+    start(async () => {
+      const res = await setAppointmentStatus(appt.id, next);
+      if (!res.ok) { setMsg(res.error); return; }
+      setStatus(next);
+      setMsg(text);
+    });
   }
 
   return (
@@ -41,25 +49,25 @@ export function SessionHeader({ appt }: { appt: Appointment }) {
         <ModeChip mode={appt.mode} />
       </div>
       <div className="btn-row">
-        <button type="button" className="btn" disabled={!open} onClick={() => change('COMPLETED', 'Marked as completed.')}>
+        <button type="button" className="btn" disabled={!open || pending} onClick={() => change('COMPLETED', 'Marked as completed.')}>
           Mark completed
         </button>
-        <button type="button" className="btn secondary" disabled={!open} onClick={() => change('NO_SHOW', 'Marked as no-show.')}>
+        <button type="button" className="btn secondary" disabled={!open || pending} onClick={() => change('NO_SHOW', 'Marked as no-show.')}>
           Mark no-show
         </button>
-        <button type="button" className="btn danger" disabled={!open} onClick={() => setConfirming(true)}>
+        <button type="button" className="btn danger" disabled={!open || pending} onClick={() => setConfirming(true)}>
           Cancel appointment
         </button>
       </div>
       <p className="sublabel" role="status" style={{ marginTop: 10, minHeight: 16 }}>
-        {msg || (open ? 'Changes here are local in this prototype.' : '')}
+        {pending ? 'Saving…' : msg}
       </p>
       <ConfirmDialog
         open={confirming}
         title="Cancel this appointment?"
-        body="The slot will reopen and the student will be told the session was cancelled."
+        body="The student will see the session was cancelled in the app. The hour is taken off your availability."
         confirmLabel="Cancel appointment"
-        onConfirm={() => change('CANCELLED_THERAPIST', 'Appointment cancelled. The slot is open again.')}
+        onConfirm={() => change('CANCELLED_THERAPIST', 'Appointment cancelled.')}
         onCancel={() => setConfirming(false)}
       />
     </section>

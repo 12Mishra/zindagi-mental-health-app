@@ -57,6 +57,9 @@ async function main() {
   const passwordHash = await hashPassword(password);
 
   // Remove previous seed data (students cascade to their own rows; the institution cascades staff, stats, alerts).
+  const keepLinked = (await prisma.user.findMany({
+    where: { institution: { slug: SLUG }, NOT: { phoneNumber: { startsWith: PHONE_PREFIX } } }, select: { id: true },
+  })).map(u => u.id);
   await prisma.user.deleteMany({ where: { phoneNumber: { startsWith: PHONE_PREFIX } } });
   await prisma.institution.deleteMany({ where: { slug: SLUG } });
 
@@ -68,6 +71,7 @@ async function main() {
     { email: 'admin@tiet.test', role: 'ADMIN' as const, displayName: 'Campus Admin' },
     { email: 'therapist1@tiet.test', role: 'THERAPIST' as const, displayName: 'Dr. Sonam Dullat' },
     { email: 'therapist2@tiet.test', role: 'THERAPIST' as const, displayName: 'Dr. Rahul Arora' },
+    { email: 'therapist3@tiet.test', role: 'THERAPIST' as const, displayName: 'Dr. Meera Kapoor' },
   ];
   const staff = [];
   for (const s of staffData) staff.push(await prisma.staffUser.create({ data: { ...s, institutionId: institution.id, passwordHash } }));
@@ -75,6 +79,7 @@ async function main() {
   await prisma.therapistProfile.createMany({ data: [
     { staffUserId: therapists[0].id, languages: ['en', 'hi'], specialties: ['ANXIETY', 'ACADEMIC', 'SLEEP'], bio: 'Student counsellor' },
     { staffUserId: therapists[1].id, languages: ['en', 'hi'], specialties: ['RELATIONSHIPS', 'FAMILY', 'CAREER'], bio: 'Clinical psychologist' },
+    { staffUserId: therapists[2].id, languages: ['en', 'hi', 'pa'], specialties: ['FAMILY', 'HEALTH'], bio: 'Counselling psychologist' },
   ] });
 
   // Students: years 40/28/20/12 %.
@@ -130,17 +135,22 @@ async function main() {
     policyVersion: POLICY_VERSION, createdAt: new Date(now - (i + 1) * 8 * 3_600_000),
   })) });
 
-  // Therapist availability: weekdays, hourly 10:00-16:00, next 14 days.
-  const today = new Date(new Date(now).setHours(0, 0, 0, 0));
+  // Therapist availability: 1-hour office-hours slots (09:00-17:00 IST), weekdays, next 14 days. Counsellors do
+  // not always publish times, so the first publishes most hours, the second a few, the third none (requests only).
+  const IST = 330 * 60_000;
+  const istMidnight = Math.floor((now + IST) / DAY) * DAY - IST;
   const slots: Array<{ therapistId: string; startsAt: Date; endsAt: Date; mode: 'IN_PERSON' | 'PHONE' }> = [];
-  for (const t of therapists) for (let d = 1; d <= 14; d++) {
-    const day = new Date(today.getTime() + d * DAY);
-    if (day.getDay() === 0 || day.getDay() === 6) continue;
-    for (let h = 10; h < 16; h++) {
-      const startsAt = new Date(day.getTime() + h * 3_600_000);
-      slots.push({ therapistId: t.id, startsAt, endsAt: new Date(startsAt.getTime() + 3_000_000), mode: h % 3 === 0 ? 'PHONE' : 'IN_PERSON' });
+  const publishes = [(h: number) => h !== 13, (h: number) => h === 10 || h === 15, () => false];
+  therapists.forEach((t, ti) => { for (let d = 1; d <= 14; d++) {
+    const dayStart = istMidnight + d * DAY;
+    const weekday = new Date(dayStart + IST).getUTCDay();
+    if (weekday === 0 || weekday === 6) continue;
+    for (let h = 9; h < 17; h++) {
+      if (!publishes[ti](h)) continue;
+      const startsAt = new Date(dayStart + h * 3_600_000);
+      slots.push({ therapistId: t.id, startsAt, endsAt: new Date(startsAt.getTime() + 3_600_000), mode: h % 3 === 0 ? 'PHONE' : 'IN_PERSON' });
     }
-  }
+  } });
   await prisma.availabilitySlot.createMany({ data: slots });
 
   // Three appointments: one with identity consent, one brief only, one with no consent at all.
@@ -157,8 +167,24 @@ async function main() {
     } });
   }
 
+  // Re-seeding recreated the institution, which unlinked real dev accounts: put back the ones that were linked.
+  if (keepLinked.length) await prisma.user.updateMany({ where: { id: { in: keepLinked } }, data: { institutionId: institution.id } });
+
+  // Two waiting session requests: one addressed to the third counsellor, one to anyone.
+  const windowsFor = (offsets: Array<[number, number]>) => offsets.map(([d, h]) => {
+    let dayStart = istMidnight + d * DAY;
+    while ([0, 6].includes(new Date(dayStart + IST).getUTCDay())) dayStart += DAY;
+    return new Date(dayStart + h * 3_600_000);
+  });
+  await prisma.sessionRequest.createMany({ data: [
+    { institutionId: institution.id, studentId: risky[3 % risky.length].id, rollNumber: '102103117', branch: 'Computer Engineering',
+      preferredTherapistId: therapists[2].id, windows: windowsFor([[1, 11], [1, 12], [2, 15]]) },
+    { institutionId: institution.id, studentId: risky[4 % risky.length].id, rollNumber: '102215042', branch: 'Electronics and Communication',
+      mode: 'PHONE', windows: windowsFor([[2, 9], [3, 14]]) },
+  ] });
+
   console.log(`Seeded ${STUDENTS} students, ${checkins.length} check-ins, ${conversations.length} conversations, ${slots.length} slots.`);
-  console.log('Staff (same password): admin@tiet.test, therapist1@tiet.test, therapist2@tiet.test');
+  console.log('Staff (same password): admin@tiet.test, therapist1@tiet.test, therapist2@tiet.test, therapist3@tiet.test');
   if (!process.env.SEED_STAFF_PASSWORD) console.log(`Generated staff password (shown once): ${password}`);
 }
 

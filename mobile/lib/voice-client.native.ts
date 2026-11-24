@@ -1,12 +1,24 @@
 import { AppState } from 'react-native';
-import { AudioContext, AudioManager, AudioRecorder } from 'react-native-audio-api';
+import type { AudioContext, AudioRecorder } from 'react-native-audio-api';
 import type { VoiceClient, VoiceClientOptions, VoiceEvent } from './voice-client-types';
 import { PcmResampler } from './pcm-resampler';
 
 // Audio scheduled this far ahead after a start or an underrun, so the next late chunk does not leave an audible gap.
 const PLAYBACK_LEAD_S = 0.15;
 
+type AudioApi = typeof import('react-native-audio-api');
+
+// Loaded lazily: Expo Go has no react-native-audio-api native module, and a top-level import would crash the whole route.
+function loadAudioApi(): AudioApi {
+  try {
+    return require('react-native-audio-api') as AudioApi;
+  } catch {
+    throw new Error('Voice needs a development build (react-native-audio-api is not available in Expo Go).');
+  }
+}
+
 export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
+  const { AudioContext, AudioManager, AudioRecorder } = loadAudioApi();
   let socket: WebSocket | null = null;
   let recorder: AudioRecorder | null = null;
   let context: AudioContext | null = null;

@@ -1,28 +1,46 @@
 'use client';
 
-import { useState, type KeyboardEvent } from 'react';
+import { useState, useTransition, type KeyboardEvent } from 'react';
+import { openSlot, removeSlot } from '@/lib/actions';
 import { fmtShortDate, fmtTime } from '@/lib/format';
 import type { Slot } from '@/lib/types';
 
 const DAYS = 5;
 
 export function AvailabilityGrid({ slots }: { slots: Slot[] }) {
-  const [state, setState] = useState<Record<string, Slot['status']>>(() =>
-    Object.fromEntries(slots.map((s) => [s.id, s.status])),
+  // Keyed by start time: a closed hour has no slot id until it is opened.
+  const [cells, setCells] = useState<Record<string, { id: string | null; status: Slot['status'] }>>(() =>
+    Object.fromEntries(slots.map((s) => [s.startsAt, { id: s.id, status: s.status }])),
   );
   const [active, setActive] = useState({ r: 0, c: 0 });
   const [live, setLive] = useState('');
+  const [error, setError] = useState('');
+  const [, start] = useTransition();
+  const [saving, setSaving] = useState<string | null>(null);
 
   const rows = Math.ceil(slots.length / DAYS);
   // slots arrive day-major: index = day * rows + row
   const at = (r: number, c: number) => slots[c * rows + r];
 
   function toggle(s: Slot) {
-    const cur = state[s.id];
-    if (cur === 'BOOKED') return;
-    const next = cur === 'OPEN' ? 'REMOVED' : 'OPEN';
-    setState((p) => ({ ...p, [s.id]: next }));
-    setLive(`${fmtShortDate(s.startsAt)} ${fmtTime(s.startsAt)} ${next === 'OPEN' ? 'opened' : 'removed'}`);
+    const cur = cells[s.startsAt];
+    if (cur.status === 'BOOKED' || s.past || saving) return;
+    const opening = cur.status !== 'OPEN';
+    const label = `${fmtShortDate(s.startsAt)} ${fmtTime(s.startsAt)}`;
+    setError('');
+    setSaving(s.startsAt);
+    setCells((p) => ({ ...p, [s.startsAt]: { ...cur, status: opening ? 'OPEN' : 'REMOVED' } })); // optimistic
+    start(async () => {
+      const res = opening ? await openSlot(s.startsAt, s.endsAt) : await removeSlot(cur.id!);
+      setSaving(null);
+      if (!res.ok) {
+        setCells((p) => ({ ...p, [s.startsAt]: cur }));
+        setError(`${label}: ${res.error}`);
+        return;
+      }
+      if (opening) setCells((p) => ({ ...p, [s.startsAt]: { id: (res.data as { id: string }).id, status: 'OPEN' } }));
+      setLive(`${label} ${opening ? 'opened' : 'removed'}`);
+    });
   }
 
   function onKey(e: KeyboardEvent<HTMLDivElement>) {
@@ -63,24 +81,26 @@ export function AvailabilityGrid({ slots }: { slots: Slot[] }) {
               <div role="rowheader" className="avail-time">{fmtTime(at(r, 0).startsAt)}</div>
               {Array.from({ length: DAYS }, (_, c) => {
                 const s = at(r, c);
-                const st = state[s.id];
+                const st = cells[s.startsAt].status;
+                const locked = st === 'BOOKED' || !!s.past;
                 const label = `${fmtShortDate(s.startsAt)}, ${fmtTime(s.startsAt)}: ${
-                  st === 'BOOKED' ? `booked, ${s.pseudonym}` : st === 'OPEN' ? 'open' : 'removed'
+                  st === 'BOOKED' ? `booked, ${s.pseudonym ?? 'student'}` : s.past ? 'past' : st === 'OPEN' ? 'open' : 'closed'
                 }`;
                 return (
                   <div key={c} role="gridcell">
                     <button
                       type="button"
                       id={`cell-${r}-${c}`}
-                      className={`slot ${st.toLowerCase()}`}
+                      className={`slot ${st.toLowerCase()}${s.past && st !== 'BOOKED' ? ' past' : ''}`}
                       tabIndex={active.r === r && active.c === c ? 0 : -1}
                       aria-label={label}
-                      aria-pressed={st === 'BOOKED' ? undefined : st === 'OPEN'}
-                      aria-disabled={st === 'BOOKED' || undefined}
+                      aria-pressed={locked ? undefined : st === 'OPEN'}
+                      aria-disabled={locked || undefined}
+                      aria-busy={saving === s.startsAt || undefined}
                       onFocus={() => setActive({ r, c })}
                       onClick={() => toggle(s)}
                     >
-                      {st === 'BOOKED' ? s.pseudonym : st === 'OPEN' ? 'Open' : 'Removed'}
+                      {st === 'BOOKED' ? s.pseudonym ?? 'Booked' : st === 'OPEN' ? 'Open' : s.past ? '—' : 'Closed'}
                     </button>
                   </div>
                 );
@@ -91,9 +111,10 @@ export function AvailabilityGrid({ slots }: { slots: Slot[] }) {
       </div>
       <div className="legend" aria-label="Legend">
         <span><i className="swatch open" /> Open: students can book</span>
-        <span><i className="swatch removed" /> Removed: hidden from students</span>
+        <span><i className="swatch removed" /> Closed: students can still request it</span>
         <span><i className="swatch booked" /> Booked: locked</span>
       </div>
+      <p className="form-error" role="alert" style={{ marginTop: 8 }}>{error}</p>
       <p className="sr-only" role="status" aria-live="polite">{live}</p>
     </div>
   );

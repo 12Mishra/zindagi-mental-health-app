@@ -2,8 +2,9 @@ import { MODE_LABEL, STATUS_LABEL } from '@/lib/format';
 import type { Appointment, Consent } from '@/lib/types';
 import { IconLock, IconShield, IconUser } from './Icons';
 
+/** Requests deliberately carry no reason, so an empty reason renders nothing. */
 export function ReasonChip({ reason }: { reason: string | null }) {
-  return <span className="chip neutral">{reason ?? 'No reason given'}</span>;
+  return reason ? <span className="chip neutral">{reason}</span> : null;
 }
 
 export function ModeChip({ mode }: { mode: Appointment['mode'] }) {
