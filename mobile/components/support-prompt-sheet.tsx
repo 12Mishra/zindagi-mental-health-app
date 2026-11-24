@@ -1,8 +1,9 @@
 import { useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ZColors, ZRadius } from '@/constants/zindagi-theme';
+import { PressScale } from '@/components/z/press';
+import { ZColors, ZFont, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
 import {
   getPendingPrompt, listContacts, previewMessage, respondToPrompt, type Contact, type MessageLang, type PendingPrompt,
@@ -108,40 +109,40 @@ export function SupportPromptHost() {
           {step === 'sent' ? <>
             <Text style={styles.title}>Message queued</Text>
             <Text style={styles.body}>{contact?.name} will get a short check-in request. It says nothing about what you shared. You can see exactly what was sent in your message log.</Text>
-            <TouchableOpacity style={styles.primary} onPress={() => goTo('/contact-log')}><Text style={styles.primaryText}>See message log</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.ghost} onPress={close}><Text style={styles.ghostText}>Close</Text></TouchableOpacity>
+            <PressScale style={styles.primary} onPress={() => goTo('/contact-log')}><Text style={styles.primaryText}>See message log</Text></PressScale>
+            <PressScale style={styles.ghost} onPress={close}><Text style={styles.ghostText}>Close</Text></PressScale>
           </> : step === 'preview' && contact ? <>
             <Text style={styles.title}>This is exactly what {contact.name} will receive</Text>
             <View style={styles.previewBox}><Text style={styles.previewText}>{preview}</Text></View>
             <Text style={styles.small}>Sent by {contact.channel === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}. It does not include anything you said to Lisa.</Text>
             <View style={styles.langRow}>
-              {(['en', 'hi'] as const).map(l => <TouchableOpacity key={l} style={[styles.chip, lang === l && styles.chipOn]} disabled={busy} onPress={() => void openPreview(l)}>
+              {(['en', 'hi'] as const).map(l => <PressScale key={l} style={[styles.chip, lang === l && styles.chipOn]} disabled={busy} onPress={() => void openPreview(l)}>
                 <Text style={[styles.chipText, lang === l && styles.chipTextOn]}>{l === 'en' ? 'English' : 'हिन्दी'}</Text>
-              </TouchableOpacity>)}
+              </PressScale>)}
             </View>
-            <TouchableOpacity style={styles.primary} disabled={busy} onPress={() => void send()}>
+            <PressScale style={styles.primary} disabled={busy} onPress={() => void send()}>
               <Text style={styles.primaryText}>Send to {contact.name}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.ghost} disabled={busy} onPress={() => setStep('choose')}><Text style={styles.ghostText}>Back</Text></TouchableOpacity>
+            </PressScale>
+            <PressScale style={styles.ghost} disabled={busy} onPress={() => setStep('choose')}><Text style={styles.ghostText}>Back</Text></PressScale>
           </> : contact ? <>
             <Text style={styles.title}>{soft ? `It's been a hard few days. Would you like to reach out to ${contact.name}?` : `Would you like to talk to ${contact.name}?`}</Text>
-            <TouchableOpacity style={styles.primary} disabled={busy} onPress={() => void call()}><Text style={styles.primaryText}>Call {contact.name}</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.secondary} disabled={busy} onPress={() => void openPreview(lang)}>
+            <PressScale style={styles.primary} disabled={busy} onPress={() => void call()}><Text style={styles.primaryText}>Call {contact.name}</Text></PressScale>
+            <PressScale style={styles.secondary} disabled={busy} onPress={() => void openPreview(lang)}>
               <Text style={styles.secondaryText}>Send {contact.name} a check-in message</Text>
-            </TouchableOpacity>
-            {contacts.length > 1 && <TouchableOpacity onPress={() => setShowOthers(!showOthers)}>
+            </PressScale>
+            {contacts.length > 1 && <PressScale onPress={() => setShowOthers(!showOthers)}>
               <Text style={styles.link}>Someone else {showOthers ? '▴' : '▾'}</Text>
-            </TouchableOpacity>}
-            {showOthers && contacts.map((c, i) => i === selected ? null : <TouchableOpacity key={c.id} style={styles.other} onPress={() => { setSelected(i); setShowOthers(false); }}>
+            </PressScale>}
+            {showOthers && contacts.map((c, i) => i === selected ? null : <PressScale key={c.id} style={styles.other} onPress={() => { setSelected(i); setShowOthers(false); }}>
               <Text style={styles.otherText}>{c.name}</Text>
-            </TouchableOpacity>)}
-            <TouchableOpacity style={styles.ghost} disabled={busy} onPress={() => void decline()}><Text style={styles.ghostText}>Not now</Text></TouchableOpacity>
+            </PressScale>)}
+            <PressScale style={styles.ghost} disabled={busy} onPress={() => void decline()}><Text style={styles.ghostText}>Not now</Text></PressScale>
           </> : <>
             <Text style={styles.title}>{soft ? 'It looks like things have been hard lately.' : 'You do not have to go through this alone.'}</Text>
             <Text style={styles.body}>Talking to someone can help. You can call Tele-MANAS any time, free and confidential.</Text>
-            <TouchableOpacity style={styles.primary} onPress={() => callCrisis('14416')}><Text style={styles.primaryText}>Call Tele-MANAS 14416</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.secondary} onPress={() => goTo('/trusted-contacts')}><Text style={styles.secondaryText}>Add someone you trust</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.ghost} disabled={busy} onPress={() => void decline()}><Text style={styles.ghostText}>Not now</Text></TouchableOpacity>
+            <PressScale style={styles.primary} onPress={() => callCrisis('14416')}><Text style={styles.primaryText}>Call Tele-MANAS 14416</Text></PressScale>
+            <PressScale style={styles.secondary} onPress={() => goTo('/trusted-contacts')}><Text style={styles.secondaryText}>Add someone you trust</Text></PressScale>
+            <PressScale style={styles.ghost} disabled={busy} onPress={() => void decline()}><Text style={styles.ghostText}>Not now</Text></PressScale>
           </>}
           {!!error && <Text style={styles.error}>{error}</Text>}
           {busy && <ActivityIndicator color={ZColors.olive} />}
@@ -156,28 +157,28 @@ export function SupportPromptHost() {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet: { backgroundColor: ZColors.cream, borderTopLeftRadius: ZRadius.cardLg, borderTopRightRadius: ZRadius.cardLg, maxHeight: '88%' },
+  sheet: { backgroundColor: 'rgba(255,255,255,0.7)', borderTopLeftRadius: ZRadius.cardLg, borderTopRightRadius: ZRadius.cardLg, maxHeight: '88%' },
   content: { padding: 24, paddingBottom: 36, gap: 12 },
-  title: { color: ZColors.textPrimary, fontSize: 21, fontWeight: '700', lineHeight: 28 },
-  body: { color: ZColors.textSecondary, fontSize: 15, lineHeight: 22 },
-  small: { color: ZColors.textMuted, fontSize: 12, lineHeight: 17 },
-  primary: { backgroundColor: ZColors.olive, borderRadius: ZRadius.pill, paddingVertical: 15, alignItems: 'center' },
-  primaryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  secondary: { backgroundColor: ZColors.sageLight, borderRadius: ZRadius.pill, paddingVertical: 15, alignItems: 'center' },
-  secondaryText: { color: ZColors.forest, fontWeight: '700', fontSize: 15 },
+  title: { color: ZColors.textPrimary, fontSize: 21, fontFamily: ZFont.bold, lineHeight: 28 },
+  body: { color: ZColors.textSecondary, fontFamily: ZFont.regular, fontSize: 15, lineHeight: 22 },
+  small: { color: ZColors.textMuted, fontFamily: ZFont.regular, fontSize: 12, lineHeight: 17 },
+  primary: { backgroundColor: ZColors.olive, borderRadius: 20, paddingVertical: 16, alignItems: 'center', paddingHorizontal: 18, flexDirection: 'row', justifyContent: 'center', gap: 8, borderTopWidth: 1.5, borderTopColor: 'rgba(255,255,255,0.35)', ...ZShadow.glow },
+  primaryText: { color: '#fff', fontFamily: ZFont.bold, fontSize: 16 },
+  secondary: { borderRadius: 18, paddingVertical: 13, paddingHorizontal: 16, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.88)', borderWidth: 1, borderColor: '#FFFFFF', ...ZShadow.lifted },
+  secondaryText: { color: ZColors.forest, fontFamily: ZFont.bold, fontSize: 15 },
   ghost: { paddingVertical: 12, alignItems: 'center' },
-  ghostText: { color: ZColors.textSecondary, fontWeight: '600', fontSize: 15 },
-  link: { color: ZColors.olive, fontWeight: '600', textAlign: 'center', paddingVertical: 4 },
-  other: { backgroundColor: ZColors.creamCard, borderRadius: ZRadius.small, padding: 14 },
-  otherText: { color: ZColors.textPrimary, fontSize: 15 },
-  previewBox: { backgroundColor: ZColors.creamCard, borderRadius: ZRadius.small, padding: 14 },
-  previewText: { color: ZColors.textPrimary, fontSize: 15, lineHeight: 22 },
+  ghostText: { color: ZColors.textSecondary, fontFamily: ZFont.semibold, fontSize: 15 },
+  link: { color: ZColors.olive, fontFamily: ZFont.semibold, textAlign: 'center', paddingVertical: 4 },
+  other: { backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF', borderRadius: ZRadius.small, padding: 14 },
+  otherText: { color: ZColors.textPrimary, fontFamily: ZFont.regular, fontSize: 15 },
+  previewBox: { backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF', borderRadius: ZRadius.small, padding: 14 },
+  previewText: { color: ZColors.textPrimary, fontFamily: ZFont.regular, fontSize: 15, lineHeight: 22 },
   langRow: { flexDirection: 'row', gap: 8 },
-  chip: { borderRadius: ZRadius.pill, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: ZColors.creamCard },
+  chip: { borderRadius: ZRadius.pill, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF' },
   chipOn: { backgroundColor: ZColors.forest },
-  chipText: { color: ZColors.textSecondary, fontWeight: '600' },
+  chipText: { color: ZColors.textSecondary, fontFamily: ZFont.semibold },
   chipTextOn: { color: '#fff' },
-  error: { color: ZColors.coralDeep, fontSize: 13 },
-  crisis: { color: ZColors.textMuted, fontSize: 13, textAlign: 'center', marginTop: 8 },
-  crisisLink: { color: ZColors.forest, fontWeight: '700' },
+  error: { color: ZColors.coralDeep, fontFamily: ZFont.regular, fontSize: 13 },
+  crisis: { color: ZColors.textMuted, fontFamily: ZFont.regular, fontSize: 13, textAlign: 'center', marginTop: 8 },
+  crisisLink: { color: ZColors.forest, fontFamily: ZFont.bold },
 });

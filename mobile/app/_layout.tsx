@@ -1,39 +1,59 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import {
+  BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold,
+} from '@expo-google-fonts/bricolage-grotesque';
+import {
+  PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold, useFonts,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { SupportPromptHost } from '@/components/support-prompt-sheet';
 import { ZColors } from '@/constants/zindagi-theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export const unstable_settings = {
   initialRouteName: 'login',
   anchor: '(tabs)',
 };
 
+// The student app is designed light-only for now: the Moss materials are lit for a pale canvas.
+const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: ZColors.canvas, primary: ZColors.olive } };
+
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [loaded, failed] = useFonts({
+    BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold,
+    PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
+  useEffect(() => { if (loaded || failed) void SplashScreen.hideAsync().catch(() => {}); }, [loaded, failed]);
+  if (!loaded && !failed) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={theme}>
       <Stack
         initialRouteName="login"
         screenOptions={{
-          contentStyle: { backgroundColor: ZColors.cream },
+          contentStyle: { backgroundColor: ZColors.canvas },
+          animation: 'fade_from_bottom',
+          headerShown: false,
         }}
       >
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="profile-details" options={{ headerShown: false }} />
-        <Stack.Screen name="history" options={{ headerShown: false }} />
-        <Stack.Screen name="trusted-contacts" options={{ headerShown: false }} />
-        <Stack.Screen name="contact-log" options={{ headerShown: false }} />
-        <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="login" options={{ animation: 'fade' }} />
+        <Stack.Screen name="profile-details" />
+        <Stack.Screen name="history" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="trusted-contacts" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="contact-log" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="chat/[id]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
       </Stack>
       <SupportPromptHost />
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </ThemeProvider>
   );
 }

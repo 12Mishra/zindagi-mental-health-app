@@ -1,9 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Backdrop } from '@/components/z/backdrop';
+import { PressScale } from '@/components/z/press';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ZColors } from '@/constants/zindagi-theme';
+import { ZColors, ZFont } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
 import { deleteConversation, getSavedConversations, type SavedConversation } from '@/lib/conversation-api';
 
@@ -43,15 +45,15 @@ export default function SavedSessionsScreen() {
     } finally { setDeletingId(null); }
   };
 
-  return <SafeAreaView style={styles.safe}>
+  return <View style={{ flex: 1 }}><Backdrop /><SafeAreaView style={styles.safe}>
     <View style={styles.header}>
       <View>
         <Text style={styles.title}>Saved sessions</Text>
         <Text style={styles.subtitle}>Only sessions saved with your consent appear here.</Text>
       </View>
-      <TouchableOpacity onPress={() => void refresh()} disabled={loading} accessibilityLabel="Refresh saved sessions">
+      <PressScale onPress={() => void refresh()} disabled={loading} accessibilityLabel="Refresh saved sessions">
         <MaterialIcons name="refresh" size={26} color={ZColors.forest} />
-      </TouchableOpacity>
+      </PressScale>
     </View>
     {loading && <ActivityIndicator color={ZColors.olive} />}
     {!!notice && <Text style={styles.notice}>{notice}</Text>}
@@ -65,33 +67,33 @@ export default function SavedSessionsScreen() {
           {!!item.summary.keyThemes.length && <Text style={styles.themes}>Themes: {item.summary.keyThemes.join(', ')}</Text>}
         </> : <Text style={styles.pending}>A summary will appear here if its job completes successfully.</Text>}
         <View style={styles.actions}>
-          <TouchableOpacity onPress={() => setConfirmId(confirmId === item.id ? null : item.id)}>
+          <PressScale onPress={() => setConfirmId(confirmId === item.id ? null : item.id)}>
             <Text style={styles.delete}>Delete session data</Text>
-          </TouchableOpacity>
-          {confirmId === item.id && <TouchableOpacity onPress={() => void remove(item.id)} disabled={deletingId === item.id}>
+          </PressScale>
+          {confirmId === item.id && <PressScale onPress={() => void remove(item.id)} disabled={deletingId === item.id}>
             <Text style={styles.confirm}>{deletingId === item.id ? 'Deleting...' : 'Confirm deletion'}</Text>
-          </TouchableOpacity>}
+          </PressScale>}
         </View>
       </View>)}
     </ScrollView>
-  </SafeAreaView>;
+  </SafeAreaView></View>;
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: ZColors.cream },
+  safe: { flex: 1, backgroundColor: 'transparent' },
   header: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 26, fontWeight: '700', color: ZColors.forest },
+  title: { fontSize: 26, fontFamily: ZFont.bold, color: ZColors.forest },
   subtitle: { color: ZColors.textSecondary, marginTop: 4, maxWidth: 280 },
   notice: { color: ZColors.coralDeep, paddingHorizontal: 20, paddingBottom: 8 },
   list: { padding: 20, paddingTop: 4, gap: 12 },
   empty: { color: ZColors.textSecondary },
-  card: { backgroundColor: ZColors.creamCard, borderRadius: 14, padding: 16, gap: 9 },
-  date: { color: ZColors.textPrimary, fontWeight: '700' },
+  card: { backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF', borderRadius: 14, padding: 16, gap: 9 },
+  date: { color: ZColors.textPrimary, fontFamily: ZFont.bold },
   status: { color: ZColors.olive, textTransform: 'capitalize' },
   summary: { color: ZColors.textPrimary, lineHeight: 21 },
-  themes: { color: ZColors.textSecondary, fontSize: 12 },
+  themes: { color: ZColors.textSecondary, fontFamily: ZFont.regular, fontSize: 12 },
   pending: { color: ZColors.textSecondary, fontStyle: 'italic' },
   actions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 12 },
-  delete: { color: ZColors.coralDeep, fontWeight: '600' },
-  confirm: { color: ZColors.coralDeep, fontWeight: '800' },
+  delete: { color: ZColors.coralDeep, fontFamily: ZFont.semibold },
+  confirm: { color: ZColors.coralDeep, fontFamily: ZFont.heavy },
 });

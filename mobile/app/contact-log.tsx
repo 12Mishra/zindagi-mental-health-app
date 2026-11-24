@@ -1,10 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Backdrop } from '@/components/z/backdrop';
+import { PressScale } from '@/components/z/press';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { ZColors, ZFont, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
 import { listContactNotifications, type ContactNotification } from '@/lib/contacts-api';
 
@@ -21,9 +23,9 @@ export default function ContactLogScreen() {
     listContactNotifications(token).then(setItems).catch(e => setError(e instanceof Error ? e.message : 'Could not load the log.'));
   }, [router]);
 
-  return <SafeAreaView style={styles.root}>
+  return <View style={{ flex: 1 }}><Backdrop /><SafeAreaView style={styles.root}>
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Back"><MaterialIcons name="arrow-back" size={26} color={ZColors.forest} /></TouchableOpacity>
+      <PressScale onPress={() => router.back()} accessibilityLabel="Back"><MaterialIcons name="arrow-back" size={26} color={ZColors.forest} /></PressScale>
       <Text style={styles.title}>Messages sent</Text>
       <View style={{ width: 26 }} />
     </View>
@@ -38,19 +40,19 @@ export default function ContactLogScreen() {
       </View>)}
       {!!error && <Text style={styles.error}>{error}</Text>}
     </ScrollView>
-  </SafeAreaView>;
+  </SafeAreaView></View>;
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: ZColors.cream },
+  root: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
-  title: { color: ZColors.textPrimary, fontSize: 20, fontWeight: '700' },
+  title: { color: ZColors.textPrimary, fontSize: 20, fontFamily: ZFont.bold },
   content: { padding: 20, paddingTop: 0, gap: 14 },
-  intro: { color: ZColors.textSecondary, fontSize: 14, lineHeight: 21 },
-  empty: { color: ZColors.textMuted, fontSize: 15, textAlign: 'center', marginTop: 24 },
-  card: { backgroundColor: '#fff', borderRadius: ZRadius.card, padding: 16, gap: 6, ...ZShadow.card },
-  who: { color: ZColors.textPrimary, fontSize: 16, fontWeight: '700' },
-  meta: { color: ZColors.textMuted, fontSize: 12 },
-  body: { color: ZColors.textPrimary, fontSize: 14, lineHeight: 21, marginTop: 4 },
+  intro: { color: ZColors.textSecondary, fontFamily: ZFont.regular, fontSize: 14, lineHeight: 21 },
+  empty: { color: ZColors.textMuted, fontFamily: ZFont.regular, fontSize: 15, textAlign: 'center', marginTop: 24 },
+  card: { backgroundColor: '#fff', borderRadius: ZRadius.cardLg, padding: 16, gap: 6, ...ZShadow.lifted },
+  who: { color: ZColors.textPrimary, fontSize: 16, fontFamily: ZFont.bold },
+  meta: { color: ZColors.textMuted, fontFamily: ZFont.regular, fontSize: 12 },
+  body: { color: ZColors.textPrimary, fontFamily: ZFont.regular, fontSize: 14, lineHeight: 21, marginTop: 4 },
   error: { color: ZColors.coralDeep, textAlign: 'center' },
 });

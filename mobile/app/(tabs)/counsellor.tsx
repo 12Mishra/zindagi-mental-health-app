@@ -1,10 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Backdrop } from '@/components/z/backdrop';
+import { PressScale } from '@/components/z/press';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { ZColors, ZFont, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
 import { fmtMsgTime, listChatContacts, listChatThreads, openChatThread, useChatEvents, type ChatContact, type ChatThread } from '@/lib/chat-api';
 import {
@@ -177,14 +179,14 @@ export default function CounsellorScreen() {
         const on = picked.includes(iso);
         const disabled = past || (taken && !open);
         const label = past ? 'Passed' : open ? 'Open · book now' : taken ? 'Taken' : on ? 'You’re free' : 'Tap if free';
-        return <TouchableOpacity key={h} disabled={disabled}
+        return <PressScale key={h} disabled={disabled}
           style={[styles.hour, open && styles.hourOpen, on && styles.hourOn, disabled && styles.hourOff]}
           accessibilityRole="button" accessibilityState={{ selected: on, disabled }}
           accessibilityLabel={`${fmtDay(day)} ${fmtHour(h)}: ${label}`}
           onPress={() => (open ? setBooking(open) : togglePick(iso))}>
           <Text style={[styles.hourTime, on && styles.hourTextOn, disabled && styles.hourTextOff]}>{fmtHour(h)}</Text>
           <Text style={[styles.hourLabel, open && styles.hourLabelOpen, on && styles.hourTextOn, disabled && styles.hourTextOff]}>{label}</Text>
-        </TouchableOpacity>;
+        </PressScale>;
       })}
     </View>;
   };
@@ -192,20 +194,20 @@ export default function CounsellorScreen() {
   const renderDayStrip = () => <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayStrip}>
     {days.map((d, i) => {
       const count = picked.filter(p => p >= hourStart(d, 0) && p < hourStart(d, 24)).length;
-      return <TouchableOpacity key={d} style={[styles.day, i === dayIdx && styles.dayOn]} onPress={() => setDayIdx(i)}
+      return <PressScale key={d} style={[styles.day, i === dayIdx && styles.dayOn]} onPress={() => setDayIdx(i)}
         accessibilityLabel={`${fmtDay(d)}${count ? `, ${count} chosen` : ''}`}>
         <Text style={[styles.dayWd, i === dayIdx && styles.dayTextOn]}>{fmtWeekday(d)}</Text>
         <Text style={[styles.dayNum, i === dayIdx && styles.dayTextOn]}>{fmtDateNum(d)}</Text>
         {count > 0 && <View style={[styles.dot, i === dayIdx && { backgroundColor: '#fff' }]} />}
-      </TouchableOpacity>;
+      </PressScale>;
     })}
   </ScrollView>;
 
   const renderPicked = () => picked.length > 0 && <View style={styles.chips}>
-    {picked.map(p => <TouchableOpacity key={p} style={styles.pickedChip} onPress={() => togglePick(p)} accessibilityLabel={`Remove ${fmtSlot(p)}`}>
+    {picked.map(p => <PressScale key={p} style={styles.pickedChip} onPress={() => togglePick(p)} accessibilityLabel={`Remove ${fmtSlot(p)}`}>
       <Text style={styles.pickedText}>{fmtDay(p)} · {fmtTime(p)}</Text>
       <MaterialIcons name="close" size={14} color={ZColors.forest} />
-    </TouchableOpacity>)}
+    </PressScale>)}
   </View>;
 
   const renderBookingConfirm = () => booking && <View style={styles.confirmCard}>
@@ -213,10 +215,10 @@ export default function CounsellorScreen() {
     <Text style={styles.body}>{counsellorName(booking.therapistId)} · {fmtSlot(booking.startsAt)} – {fmtTime(booking.endsAt)}</Text>
     <Text style={styles.meta}>{MODE_LABEL[mode]} · confirmed straight away</Text>
     <View style={styles.row}>
-      <TouchableOpacity style={[styles.primary, { flex: 1 }]} disabled={busy} onPress={() => void bookNow(booking)}>
+      <PressScale style={[styles.primary, { flex: 1 }]} disabled={busy} onPress={() => void bookNow(booking)}>
         <Text style={styles.primaryText}>{busy ? 'Booking…' : 'Book'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.ghost} onPress={() => setBooking(null)}><Text style={styles.ghostText}>Not this one</Text></TouchableOpacity>
+      </PressScale>
+      <PressScale style={styles.ghost} onPress={() => setBooking(null)}><Text style={styles.ghostText}>Not this one</Text></PressScale>
     </View>
   </View>;
 
@@ -250,10 +252,10 @@ export default function CounsellorScreen() {
     {renderBookingConfirm()}
 
     <View style={styles.explainer}><MaterialIcons name="lock-outline" size={18} color={ZColors.forest} /><Text style={styles.explainerText}>{PRIVACY}</Text></View>
-    <TouchableOpacity style={[styles.primary, (!picked.length || busy) && styles.disabled]} disabled={!picked.length || busy} onPress={() => void sendRequest()}>
+    <PressScale style={[styles.primary, (!picked.length || busy) && styles.disabled]} disabled={!picked.length || busy} onPress={() => void sendRequest()}>
       <Text style={styles.primaryText}>{busy ? 'Sending…' : picked.length ? `Send request (${picked.length} ${picked.length === 1 ? 'time' : 'times'})` : 'Pick times to send a request'}</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.ghost} onPress={back}><Text style={styles.ghostText}>Cancel</Text></TouchableOpacity>
+    </PressScale>
+    <PressScale style={styles.ghost} onPress={back}><Text style={styles.ghostText}>Cancel</Text></PressScale>
   </>;
 
   const renderRetime = () => <>
@@ -264,10 +266,10 @@ export default function CounsellorScreen() {
       {renderHours(false)}
       {renderPicked()}
     </View>
-    <TouchableOpacity style={[styles.primary, (!picked.length || busy) && styles.disabled]} disabled={!picked.length || busy} onPress={() => void sendNewTimes()}>
+    <PressScale style={[styles.primary, (!picked.length || busy) && styles.disabled]} disabled={!picked.length || busy} onPress={() => void sendNewTimes()}>
       <Text style={styles.primaryText}>{busy ? 'Sending…' : 'Send new times'}</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.ghost} onPress={back}><Text style={styles.ghostText}>Back</Text></TouchableOpacity>
+    </PressScale>
+    <PressScale style={styles.ghost} onPress={back}><Text style={styles.ghostText}>Back</Text></PressScale>
   </>;
 
   const renderRequest = (r: SessionRequest) => {
@@ -280,8 +282,8 @@ export default function CounsellorScreen() {
       {r.status === 'PROPOSED' && r.proposedStartsAt ? <>
         <Text style={styles.big}>{fmtSlot(r.proposedStartsAt)}</Text>
         <Text style={styles.meta}>{MODE_LABEL[r.mode]}{r.counsellorNote ? ` · ${r.counsellorNote}` : ''}</Text>
-        <TouchableOpacity style={styles.primary} disabled={busy} onPress={() => void accept(r)}><Text style={styles.primaryText}>Accept this time</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.secondary} disabled={busy} onPress={startRetime}><Text style={styles.secondaryText}>That doesn’t work, offer other times</Text></TouchableOpacity>
+        <PressScale style={styles.primary} disabled={busy} onPress={() => void accept(r)}><Text style={styles.primaryText}>Accept this time</Text></PressScale>
+        <PressScale style={styles.secondary} disabled={busy} onPress={startRetime}><Text style={styles.secondaryText}>That doesn’t work, offer other times</Text></PressScale>
       </> : <>
         <Text style={styles.meta}>A counsellor will confirm one of these, or suggest another time. You’ll see it here.</Text>
         <View style={styles.chips}>{r.windows.filter(w => new Date(w).getTime() > now).map(w =>
@@ -292,10 +294,10 @@ export default function CounsellorScreen() {
       {confirmCancel === r.id ? <View style={styles.confirm}>
         <Text style={styles.confirmText}>Cancel this request?</Text>
         <View style={styles.row}>
-          <TouchableOpacity style={styles.danger} disabled={busy} onPress={() => void withdraw(r)}><Text style={styles.dangerText}>Cancel request</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.ghost} onPress={() => setConfirmCancel(null)}><Text style={styles.ghostText}>Keep</Text></TouchableOpacity>
+          <PressScale style={styles.danger} disabled={busy} onPress={() => void withdraw(r)}><Text style={styles.dangerText}>Cancel request</Text></PressScale>
+          <PressScale style={styles.ghost} onPress={() => setConfirmCancel(null)}><Text style={styles.ghostText}>Keep</Text></PressScale>
         </View>
-      </View> : <TouchableOpacity onPress={() => setConfirmCancel(r.id)}><Text style={styles.linkDanger}>Cancel request</Text></TouchableOpacity>}
+      </View> : <PressScale onPress={() => setConfirmCancel(r.id)}><Text style={styles.linkDanger}>Cancel request</Text></PressScale>}
     </View>;
   };
 
@@ -313,14 +315,14 @@ export default function CounsellorScreen() {
       {confirmCancel === a.id ? <View style={styles.confirm}>
         <Text style={styles.confirmText}>Cancel this session? The counsellor will see it was cancelled.</Text>
         <View style={styles.row}>
-          <TouchableOpacity style={styles.danger} disabled={busy} onPress={() => void cancelSession(a)}><Text style={styles.dangerText}>Cancel session</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.ghost} onPress={() => setConfirmCancel(null)}><Text style={styles.ghostText}>Keep</Text></TouchableOpacity>
+          <PressScale style={styles.danger} disabled={busy} onPress={() => void cancelSession(a)}><Text style={styles.dangerText}>Cancel session</Text></PressScale>
+          <PressScale style={styles.ghost} onPress={() => setConfirmCancel(null)}><Text style={styles.ghostText}>Keep</Text></PressScale>
         </View>
       </View> : <View style={styles.row}>
-        {contactByName(a.therapistName) && <TouchableOpacity onPress={() => void openChat(contactByName(a.therapistName)!.therapistId)}>
+        {contactByName(a.therapistName) && <PressScale onPress={() => void openChat(contactByName(a.therapistName)!.therapistId)}>
           <Text style={styles.link}>Message {a.therapistName}</Text>
-        </TouchableOpacity>}
-        <TouchableOpacity onPress={() => setConfirmCancel(a.id)}><Text style={styles.linkDanger}>Cancel session</Text></TouchableOpacity>
+        </PressScale>}
+        <PressScale onPress={() => setConfirmCancel(a.id)}><Text style={styles.linkDanger}>Cancel session</Text></PressScale>
       </View>}
     </View>)}
 
@@ -337,13 +339,13 @@ export default function CounsellorScreen() {
         <Text style={styles.explainerTitle}>Talk to a campus counsellor</Text>
         <Text style={styles.explainerText}>Book a one-hour session with the counselling cell, in person or by phone. Pick an open time, or tell them when you’re free.</Text>
       </View>}
-      <TouchableOpacity style={styles.primary} onPress={startForm}><Text style={styles.primaryText}>Book or request a session</Text></TouchableOpacity>
+      <PressScale style={styles.primary} onPress={startForm}><Text style={styles.primaryText}>Book or request a session</Text></PressScale>
     </>}
     {!openRequest && upcoming.length >= 2 && <Text style={styles.meta}>You have two upcoming sessions, the most you can book at once.</Text>}
 
     {(threads.length > 0 || contacts.length > 0) && <>
       <Text style={styles.section}>Messages</Text>
-      {threads.map(t => <TouchableOpacity key={t.id} style={styles.thread} onPress={() => router.push(`/chat/${t.id}` as never)}
+      {threads.map(t => <PressScale key={t.id} style={styles.thread} onPress={() => router.push(`/chat/${t.id}` as never)}
         accessibilityLabel={`Chat with ${t.title}${t.unread ? `, ${t.unread} unread` : ''}`}>
         <View style={styles.avatar}><MaterialIcons name="chat-bubble-outline" size={18} color={ZColors.forest} /></View>
         <View style={{ flex: 1 }}>
@@ -352,16 +354,16 @@ export default function CounsellorScreen() {
             {t.lastMessageAt && <Text style={styles.meta}>{fmtMsgTime(t.lastMessageAt)}</Text>}
           </View>
           <View style={styles.row}>
-            <Text style={[styles.meta, { flex: 1 }, t.unread > 0 && { color: ZColors.textPrimary, fontWeight: '600' }]} numberOfLines={1}>
+            <Text style={[styles.meta, { flex: 1 }, t.unread > 0 && { color: ZColors.textPrimary, fontFamily: ZFont.semibold }]} numberOfLines={1}>
               {t.lastMessage ? `${t.lastMessage.from === 'STUDENT' ? 'You: ' : ''}${t.lastMessage.body}` : 'No messages yet'}
             </Text>
             {t.unread > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{t.unread}</Text></View>}
           </View>
         </View>
-      </TouchableOpacity>)}
-      {contacts.filter(c => !c.threadId).map(c => <TouchableOpacity key={c.therapistId} style={styles.secondary} disabled={busy} onPress={() => void openChat(c.therapistId)}>
+      </PressScale>)}
+      {contacts.filter(c => !c.threadId).map(c => <PressScale key={c.therapistId} style={styles.secondary} disabled={busy} onPress={() => void openChat(c.therapistId)}>
         <Text style={styles.secondaryText}>Message {c.name}</Text>
-      </TouchableOpacity>)}
+      </PressScale>)}
       <Text style={styles.meta}>Chat with counsellors you have a request or session with. Replies come during office hours; it isn’t for emergencies.</Text>
     </>}
 
@@ -374,17 +376,17 @@ export default function CounsellorScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.cardTitleSm}>{c.name}</Text>
             <Text style={styles.meta}>{[c.bio, c.languages.length ? c.languages.map(l => l.toUpperCase()).join(' · ') : null].filter(Boolean).join(' · ')}</Text>
-            <Text style={[styles.meta, next && { color: ZColors.olive, fontWeight: '600' }]}>{next ? `Next open: ${fmtSlot(next.startsAt)}` : 'No open times posted, send a request'}</Text>
+            <Text style={[styles.meta, next && { color: ZColors.olive, fontFamily: ZFont.semibold }]}>{next ? `Next open: ${fmtSlot(next.startsAt)}` : 'No open times posted, send a request'}</Text>
           </View>
         </View>;
       })}
     </>}
   </>;
 
-  return <SafeAreaView style={styles.root} edges={['top']}>
+  return <View style={{ flex: 1 }}><Backdrop /><SafeAreaView style={styles.root} edges={['top']}>
     <View style={styles.header}>
       {view !== 'home'
-        ? <TouchableOpacity onPress={back} accessibilityLabel="Back"><MaterialIcons name="arrow-back" size={26} color={ZColors.forest} /></TouchableOpacity>
+        ? <PressScale onPress={back} accessibilityLabel="Back"><MaterialIcons name="arrow-back" size={26} color={ZColors.forest} /></PressScale>
         : <View style={{ width: 26 }} />}
       <Text style={styles.title}>{view === 'home' ? 'Counsellor' : view === 'form' ? 'New session' : 'Other times'}</Text>
       <View style={{ width: 26 }} />
@@ -396,82 +398,82 @@ export default function CounsellorScreen() {
       {loading ? <ActivityIndicator color={ZColors.olive} style={{ marginTop: 40 }} />
         : view === 'form' ? renderForm() : view === 'retime' ? renderRetime() : renderHome()}
     </ScrollView>
-  </SafeAreaView>;
+  </SafeAreaView></View>;
 }
 
 function Chip({ on, label, onPress }: { on: boolean; label: string; onPress: () => void }) {
-  return <TouchableOpacity style={[styles.chip, on && styles.chipOn]} onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected: on }}>
+  return <PressScale style={[styles.chip, on && styles.chipOn]} onPress={onPress} accessibilityRole="radio" accessibilityState={{ selected: on }}>
     <Text style={[styles.chipText, on && styles.chipTextOn]}>{label}</Text>
-  </TouchableOpacity>;
+  </PressScale>;
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: ZColors.cream },
+  root: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
-  title: { color: ZColors.textPrimary, fontSize: 20, fontWeight: '700' },
+  title: { color: ZColors.textPrimary, fontSize: 20, fontFamily: ZFont.bold },
   content: { padding: 20, paddingTop: 0, gap: 14, paddingBottom: 40 },
-  section: { color: ZColors.textSecondary, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 6 },
-  explainer: { backgroundColor: ZColors.sageLight, borderRadius: ZRadius.card, padding: 16, gap: 8 },
-  explainerTitle: { color: ZColors.forest, fontSize: 17, fontWeight: '700' },
-  explainerText: { color: ZColors.forest, fontSize: 14, lineHeight: 21 },
-  card: { backgroundColor: '#fff', borderRadius: ZRadius.card, padding: 16, gap: 10, ...ZShadow.card },
-  closedCard: { backgroundColor: ZColors.creamCard, shadowOpacity: 0, elevation: 0 },
-  confirmCard: { backgroundColor: ZColors.sageLight, borderRadius: ZRadius.card, padding: 16, gap: 8 },
-  cardTitle: { color: ZColors.textPrimary, fontSize: 17, fontWeight: '700' },
-  cardTitleSm: { color: ZColors.textPrimary, fontSize: 15, fontWeight: '700' },
-  big: { color: ZColors.forest, fontSize: 22, fontWeight: '800' },
-  body: { color: ZColors.textPrimary, fontSize: 15 },
-  meta: { color: ZColors.textMuted, fontSize: 13, lineHeight: 19 },
-  code: { color: ZColors.forest, fontWeight: '700', fontFamily: 'monospace' },
+  section: { color: ZColors.textSecondary, fontSize: 13, fontFamily: ZFont.bold, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 6 },
+  explainer: { backgroundColor: ZColors.sageLight, borderRadius: ZRadius.cardLg, padding: 16, gap: 8 },
+  explainerTitle: { color: ZColors.forest, fontSize: 17, fontFamily: ZFont.bold },
+  explainerText: { color: ZColors.forest, fontFamily: ZFont.regular, fontSize: 14, lineHeight: 21 },
+  card: { backgroundColor: '#fff', borderRadius: ZRadius.cardLg, padding: 16, gap: 10, ...ZShadow.lifted },
+  closedCard: { backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF', shadowOpacity: 0, elevation: 0 },
+  confirmCard: { backgroundColor: ZColors.sageLight, borderRadius: ZRadius.cardLg, padding: 16, gap: 8 },
+  cardTitle: { color: ZColors.textPrimary, fontSize: 17, fontFamily: ZFont.bold },
+  cardTitleSm: { color: ZColors.textPrimary, fontSize: 15, fontFamily: ZFont.bold },
+  big: { color: ZColors.forest, fontSize: 22, fontFamily: ZFont.heavy },
+  body: { color: ZColors.textPrimary, fontFamily: ZFont.regular, fontSize: 15 },
+  meta: { color: ZColors.textMuted, fontFamily: ZFont.regular, fontSize: 13, lineHeight: 19 },
+  code: { color: ZColors.forest, fontFamily: 'monospace', letterSpacing: 0.5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  label: { color: ZColors.textSecondary, fontSize: 13, fontWeight: '600', marginTop: 4 },
-  input: { backgroundColor: ZColors.cream, borderRadius: ZRadius.small, padding: 12, fontSize: 16, color: ZColors.textPrimary },
+  label: { color: ZColors.textSecondary, fontSize: 13, fontFamily: ZFont.semibold, marginTop: 4 },
+  input: { backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: ZRadius.small, padding: 12, fontFamily: ZFont.regular, fontSize: 16, color: ZColors.textPrimary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderRadius: ZRadius.pill, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: ZColors.creamCard },
+  chip: { borderRadius: ZRadius.pill, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF' },
   chipOn: { backgroundColor: ZColors.forest },
-  chipText: { color: ZColors.textSecondary, fontWeight: '600' },
+  chipText: { color: ZColors.textSecondary, fontFamily: ZFont.semibold },
   chipTextOn: { color: '#fff' },
   dayStrip: { gap: 8, paddingVertical: 4 },
-  day: { width: 54, paddingVertical: 8, borderRadius: ZRadius.small, backgroundColor: ZColors.cream, alignItems: 'center', gap: 2 },
+  day: { width: 54, paddingVertical: 8, borderRadius: ZRadius.small, backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', gap: 2 },
   dayOn: { backgroundColor: ZColors.forest },
-  dayWd: { color: ZColors.textMuted, fontSize: 12, fontWeight: '600' },
-  dayNum: { color: ZColors.textPrimary, fontSize: 18, fontWeight: '700' },
+  dayWd: { color: ZColors.textMuted, fontSize: 12, fontFamily: ZFont.semibold },
+  dayNum: { color: ZColors.textPrimary, fontSize: 18, fontFamily: ZFont.bold },
   dayTextOn: { color: '#fff' },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: ZColors.olive },
   hours: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   hour: { width: '48%', flexGrow: 1, borderRadius: ZRadius.small, borderWidth: 1.5, borderColor: ZColors.creamDark, paddingVertical: 10, paddingHorizontal: 12, gap: 2 },
   hourOpen: { backgroundColor: ZColors.sageLight, borderColor: ZColors.sageMid },
   hourOn: { backgroundColor: ZColors.forest, borderColor: ZColors.forest },
-  hourOff: { backgroundColor: ZColors.cream, borderColor: ZColors.cream },
-  hourTime: { color: ZColors.textPrimary, fontSize: 15, fontWeight: '700' },
-  hourLabel: { color: ZColors.textMuted, fontSize: 12 },
-  hourLabelOpen: { color: ZColors.forest, fontWeight: '700' },
+  hourOff: { backgroundColor: 'rgba(255,255,255,0.7)', borderColor: ZColors.cream },
+  hourTime: { color: ZColors.textPrimary, fontSize: 15, fontFamily: ZFont.bold },
+  hourLabel: { color: ZColors.textMuted, fontFamily: ZFont.regular, fontSize: 12 },
+  hourLabelOpen: { color: ZColors.forest, fontFamily: ZFont.bold },
   hourTextOn: { color: '#fff' },
   hourTextOff: { color: ZColors.sage },
   pickedChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: ZColors.sageLight, borderRadius: ZRadius.pill, paddingHorizontal: 10, paddingVertical: 6 },
-  pickedText: { color: ZColors.forest, fontSize: 13, fontWeight: '600' },
-  timeChip: { backgroundColor: ZColors.cream, borderRadius: ZRadius.pill, paddingHorizontal: 10, paddingVertical: 6 },
-  timeChipText: { color: ZColors.textSecondary, fontSize: 13, fontWeight: '600' },
-  counsellor: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#fff', borderRadius: ZRadius.card, padding: 14, ...ZShadow.subtle },
+  pickedText: { color: ZColors.forest, fontSize: 13, fontFamily: ZFont.semibold },
+  timeChip: { backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: ZRadius.pill, paddingHorizontal: 10, paddingVertical: 6 },
+  timeChipText: { color: ZColors.textSecondary, fontSize: 13, fontFamily: ZFont.semibold },
+  counsellor: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#fff', borderRadius: ZRadius.cardLg, padding: 14, ...ZShadow.subtle },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: ZColors.sageLight, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: ZColors.forest, fontWeight: '800', fontSize: 17 },
-  primary: { backgroundColor: ZColors.olive, borderRadius: ZRadius.pill, paddingVertical: 15, alignItems: 'center', paddingHorizontal: 18 },
-  primaryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  secondary: { borderRadius: ZRadius.pill, paddingVertical: 13, alignItems: 'center', borderWidth: 1.5, borderColor: ZColors.olive },
-  secondaryText: { color: ZColors.olive, fontWeight: '700', fontSize: 15 },
+  avatarText: { color: ZColors.forest, fontFamily: ZFont.heavy, fontSize: 17 },
+  primary: { backgroundColor: ZColors.olive, borderRadius: 20, paddingVertical: 16, alignItems: 'center', paddingHorizontal: 18, flexDirection: 'row', justifyContent: 'center', gap: 8, borderTopWidth: 1.5, borderTopColor: 'rgba(255,255,255,0.35)', ...ZShadow.glow },
+  primaryText: { color: '#fff', fontFamily: ZFont.bold, fontSize: 16 },
+  secondary: { borderRadius: 18, paddingVertical: 13, paddingHorizontal: 16, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.88)', borderWidth: 1, borderColor: '#FFFFFF', ...ZShadow.lifted },
+  secondaryText: { color: ZColors.olive, fontFamily: ZFont.bold, fontSize: 15 },
   disabled: { opacity: 0.5 },
   ghost: { paddingVertical: 10, alignItems: 'center', paddingHorizontal: 10 },
-  ghostText: { color: ZColors.textSecondary, fontWeight: '600' },
-  linkDanger: { color: ZColors.coralDeep, fontWeight: '700', fontSize: 14 },
-  link: { color: ZColors.olive, fontWeight: '700', fontSize: 14 },
-  thread: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#fff', borderRadius: ZRadius.card, padding: 14, ...ZShadow.subtle },
+  ghostText: { color: ZColors.textSecondary, fontFamily: ZFont.semibold },
+  linkDanger: { color: ZColors.coralDeep, fontFamily: ZFont.bold, fontSize: 14 },
+  link: { color: ZColors.olive, fontFamily: ZFont.bold, fontSize: 14 },
+  thread: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#fff', borderRadius: ZRadius.cardLg, padding: 14, ...ZShadow.subtle },
   badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, backgroundColor: ZColors.coralDeep, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  badgeText: { color: '#fff', fontSize: 11, fontFamily: ZFont.heavy },
   confirm: { backgroundColor: ZColors.coralLight, borderRadius: ZRadius.small, padding: 12, gap: 8 },
-  confirmText: { color: ZColors.textPrimary, fontSize: 14 },
-  danger: { backgroundColor: ZColors.coralDeep, borderRadius: ZRadius.pill, paddingHorizontal: 20, paddingVertical: 10 },
-  dangerText: { color: '#fff', fontWeight: '700' },
+  confirmText: { color: ZColors.textPrimary, fontFamily: ZFont.regular, fontSize: 14 },
+  danger: { backgroundColor: ZColors.coralDeep, borderRadius: 18, paddingHorizontal: 20, paddingVertical: 11, borderTopWidth: 1.5, borderTopColor: 'rgba(255,255,255,0.35)', ...ZShadow.subtle },
+  dangerText: { color: '#fff', fontFamily: ZFont.bold },
   notice: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: ZColors.sageLight, borderRadius: ZRadius.small, padding: 12 },
-  noticeText: { color: ZColors.forest, fontSize: 14, fontWeight: '600', flex: 1 },
-  error: { color: ZColors.coralDeep, fontSize: 14, textAlign: 'center' },
+  noticeText: { color: ZColors.forest, fontSize: 14, fontFamily: ZFont.semibold, flex: 1 },
+  error: { color: ZColors.coralDeep, fontFamily: ZFont.regular, fontSize: 14, textAlign: 'center' },
 });

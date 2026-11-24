@@ -2,6 +2,7 @@ import { AppState } from 'react-native';
 import type { AudioContext, AudioRecorder } from 'react-native-audio-api';
 import type { VoiceClient, VoiceClientOptions, VoiceEvent } from './voice-client-types';
 import { PcmResampler } from './pcm-resampler';
+import { LevelMeter, rmsFloat, toLevel } from './voice-levels';
 
 // Audio scheduled this far ahead after a start or an underrun, so the next late chunk does not leave an audible gap.
 const PLAYBACK_LEAD_S = 0.15;
@@ -30,6 +31,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   const sources = new Set<ReturnType<AudioContext['createBufferSource']>>();
   const lastSource = new Map<number, ReturnType<AudioContext['createBufferSource']>>();
   const resampler = new PcmResampler();
+  const meter = new LevelMeter();
   const appState = AppState.addEventListener('change', state => {
     if (state !== 'active') stop();
   });
@@ -40,7 +42,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   const stopAudio = () => {
     currentGeneration = '';
     for (const source of sources) { try { source.stop(); } catch {} }
-    sources.clear(); lastSource.clear(); envelope = null;
+    sources.clear(); lastSource.clear(); envelope = null; meter.clearPlayback();
     nextPlaybackTime = context?.currentTime ?? 0;
   };
   const cleanup = () => {
@@ -69,7 +71,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     source.onEnded = () => sources.delete(source);
     // Back-to-back chunks play seamlessly; after a start or an underrun, rebuild a small cushion first.
     const when = nextPlaybackTime > context.currentTime ? nextPlaybackTime : context.currentTime + PLAYBACK_LEAD_S;
-    source.start(when); nextPlaybackTime = when + buffer.duration;
+    source.start(when); meter.schedule(channel, 24000, when); nextPlaybackTime = when + buffer.duration;
     if (typeof event.segmentIndex === 'number') lastSource.set(event.segmentIndex, source);
   };
   const beginCapture = async () => {
@@ -82,6 +84,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     const ready = recorder.onAudioReady({ sampleRate: 16000, bufferLength: 1600, channelCount: 1 }, ({ buffer, numFrames }) => {
       if (socket?.readyState !== WebSocket.OPEN || socket.bufferedAmount > 64 * 1024) return;
       const samples = buffer.getChannelData(0).subarray(0, numFrames);
+      meter.pushMic(toLevel(rmsFloat(samples)));
       resampler.push(samples, buffer.sampleRate, frame => socket?.send(frame));
     });
     if (ready.status === 'error') throw new Error('Could not configure native audio callback.');
@@ -135,5 +138,6 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     },
     end: stop,
     mute(value: boolean) { send({ type: value ? 'mute' : 'unmute' }); },
+    levels() { return meter.read(context ? context.currentTime : null); },
   };
 }

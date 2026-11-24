@@ -1,6 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
@@ -10,12 +9,17 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { Moss } from '@/components/moss/moss';
+import { Backdrop } from '@/components/z/backdrop';
+import { PressScale, ZButton } from '@/components/z/press';
+import { Clay, Frost } from '@/components/z/surfaces';
+import { webNoOutline, ZColors, ZFont } from '@/constants/zindagi-theme';
 import { ApiError, loginWithOtp, sendOtp } from '@/lib/auth-api';
 import { setAuthSession } from '@/lib/auth-session';
 
@@ -27,8 +31,10 @@ export default function LoginScreen() {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
   const [error, setError] = useState('');
-  const scrollRef = useRef<ScrollView>(null);
-  const otpInputRef = useRef<TextInput>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const otpInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const [focus, setFocus] = useState<'phone' | 'otp' | null>(null);
+  const { width } = useWindowDimensions();
 
   const phoneDigits = phone.replace(/\D/g, '');
   const otpDigits = otp.replace(/\D/g, '');
@@ -109,231 +115,150 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar style="dark" backgroundColor={ZColors.cream} />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
-      >
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={s.scroll}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <View style={{ flex: 1 }}>
+      <Backdrop />
+      <SafeAreaView style={s.safe}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
-          <View style={s.header}>
-            <Text style={s.brand}>Zindagi</Text>
-            <View style={s.stepBadge}>
-              <Text style={s.stepText}>Step 1 of 3</Text>
-            </View>
-          </View>
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={s.scroll}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Animated.View entering={FadeIn.duration(400)} style={s.header}>
+              <Text style={s.brand}>Zindagi</Text>
+              <Frost radius={99} tint="sage"><Text style={s.stepText}>Step 1 of 3</Text></Frost>
+            </Animated.View>
 
-          <View style={[s.promptCard, ZShadow.card]}>
-            <View style={s.iconNode}>
-              <MaterialIcons name="phone-iphone" size={24} color={ZColors.forest} />
-            </View>
-            <Text style={s.title}>Login with your phone</Text>
-            <Text style={s.subtitle}>
-              Enter your mobile number. We will send a one-time password to verify your access.
-            </Text>
-          </View>
-
-          <View style={s.formCard}>
-            <Text style={s.label}>Phone number</Text>
-            <View style={s.inputWrap}>
-              <Text style={s.countryCode}>+91</Text>
-              <TextInput
-                value={phone}
-                onChangeText={text => setPhone(text.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="number-pad"
-                maxLength={10}
-                placeholder="98765 43210"
-                placeholderTextColor={ZColors.textMuted}
-                style={s.input}
-              />
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.8}
-              disabled={!canSendOtp || isSendingOtp}
-              onPress={handleSendOtp}
-              style={[s.primaryBtn, { opacity: canSendOtp && !isSendingOtp ? 1 : 0.45 }]}
-            >
-              <Text style={s.primaryText}>
-                {isSendingOtp ? 'Sending...' : otpSent ? 'Send OTP again' : 'Send OTP'}
+            <Animated.View entering={FadeInDown.delay(80).springify().damping(16)} style={s.hero}>
+              <Moss expression={otpSent ? 'encouraging' : 'happy'} size={Math.min(190, width * 0.48)} />
+              <Text style={s.title}>Login with your phone</Text>
+              <Text style={s.subtitle}>
+                Enter your mobile number. We will send a one-time password to verify your access.
               </Text>
-              <MaterialIcons name="arrow-forward" size={18} color={ZColors.cream} />
-            </TouchableOpacity>
+            </Animated.View>
 
-            {otpSent && (
-              <View style={s.otpBlock}>
-                <View style={s.sentRow}>
-                  <MaterialIcons name="check-circle" size={16} color={ZColors.olive} />
-                  <Text style={s.sentText}>OTP sent to +91 {phoneDigits}</Text>
-                </View>
-
-                <Text style={s.label}>Enter OTP</Text>
-                <View style={s.inputWrap}>
+            <Animated.View entering={FadeInDown.delay(160).springify().damping(16)}>
+              <Clay radius={26} style={s.formCard}>
+                <Text style={s.label}>Phone number</Text>
+                <View style={[s.inputWrap, focus === 'phone' && s.inputFocus]}>
+                  <Text style={s.countryCode}>+91</Text>
+                  <View style={s.sep} />
                   <TextInput
-                    ref={otpInputRef}
-                    value={otp}
-                    onChangeText={setOtp}
+                    value={phone}
+                    onChangeText={text => setPhone(text.replace(/\D/g, '').slice(0, 10))}
                     keyboardType="number-pad"
-                    maxLength={6}
-                    placeholder="4-6 digit code"
+                    maxLength={10}
+                    placeholder="98765 43210"
                     placeholderTextColor={ZColors.textMuted}
-                    style={[s.input, s.otpInput]}
+                    style={s.input}
+                    onFocus={() => setFocus('phone')}
+                    onBlur={() => setFocus(null)}
+                    accessibilityLabel="Phone number"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
                   />
+                  {canSendOtp && <MaterialIcons name="check-circle" size={18} color={ZColors.olive} />}
                 </View>
 
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  disabled={!canContinue || isContinuing}
-                  onPress={handleContinue}
-                  style={[
-                    s.primaryBtn,
-                    s.continueBtn,
-                    { opacity: canContinue && !isContinuing ? 1 : 0.45 },
-                  ]}
-                >
-                  <Text style={s.primaryText}>{isContinuing ? 'Verifying...' : 'Continue'}</Text>
-                  <MaterialIcons name="arrow-forward" size={18} color={ZColors.cream} />
-                </TouchableOpacity>
-              </View>
-            )}
+                <ZButton
+                  variant={otpSent ? 'clay' : 'gloss'}
+                  label={isSendingOtp ? 'Sending…' : otpSent ? 'Send OTP again' : 'Send OTP'}
+                  icon="arrow-forward"
+                  iconRight
+                  loading={isSendingOtp}
+                  disabled={!canSendOtp}
+                  onPress={handleSendOtp}
+                  style={{ marginTop: 4 }}
+                />
 
-            {error ? (
-              <View style={s.errorBox}>
-                <MaterialIcons name="error-outline" size={15} color={ZColors.coralDeep} />
-                <Text style={s.errorText}>{error}</Text>
-              </View>
-            ) : null}
-          </View>
+                {otpSent && (
+                  <Animated.View entering={FadeInDown.springify().damping(16)} style={s.otpBlock}>
+                    <View style={s.sentRow}>
+                      <MaterialIcons name="check-circle" size={16} color={ZColors.olive} />
+                      <Text style={s.sentText}>OTP sent to +91 {phoneDigits}</Text>
+                    </View>
 
-          <TouchableOpacity style={s.supportLink} activeOpacity={0.75}>
-            <MaterialIcons name="phone-in-talk" size={14} color={ZColors.coralDeep} />
-            <Text style={s.supportText}>I need immediate support</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                    <Text style={s.label}>Enter OTP</Text>
+                    <View style={[s.inputWrap, focus === 'otp' && s.inputFocus]}>
+                      <TextInput
+                        ref={otpInputRef}
+                        value={otp}
+                        onChangeText={setOtp}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        placeholder="4-6 digit code"
+                        placeholderTextColor={ZColors.textMuted}
+                        style={[s.input, s.otpInput]}
+                        onFocus={() => setFocus('otp')}
+                        onBlur={() => setFocus(null)}
+                        accessibilityLabel="One-time password"
+                        autoComplete="sms-otp"
+                        textContentType="oneTimeCode"
+                      />
+                    </View>
+
+                    <ZButton
+                      label={isContinuing ? 'Verifying…' : 'Continue'}
+                      icon="arrow-forward"
+                      iconRight
+                      loading={isContinuing}
+                      disabled={!canContinue}
+                      onPress={handleContinue}
+                    />
+                  </Animated.View>
+                )}
+
+                {error ? (
+                  <Animated.View entering={FadeIn} style={s.errorBox}>
+                    <MaterialIcons name="error-outline" size={15} color={ZColors.coralDeep} />
+                    <Text style={s.errorText}>{error}</Text>
+                  </Animated.View>
+                ) : null}
+              </Clay>
+            </Animated.View>
+
+            <PressScale style={s.supportLink} accessibilityRole="button" accessibilityLabel="I need immediate support">
+              <MaterialIcons name="phone-in-talk" size={15} color={ZColors.coralDeep} />
+              <Text style={s.supportText}>I need immediate support</Text>
+            </PressScale>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: ZColors.cream },
-  scroll: { padding: 20, paddingBottom: 140, gap: 16, flexGrow: 1 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  brand: { fontSize: 24, fontWeight: '800', color: ZColors.forest, letterSpacing: -0.4 },
-  stepBadge: {
-    backgroundColor: ZColors.sageLight,
-    borderRadius: ZRadius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  stepText: { fontSize: 11, fontWeight: '700', color: ZColors.forest },
-  promptCard: {
-    backgroundColor: ZColors.sageLight,
-    borderRadius: ZRadius.card,
-    padding: 20,
-    gap: 8,
-    marginTop: 18,
-  },
-  iconNode: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(244, 244, 240, 0.72)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  title: { fontSize: 26, fontWeight: '800', color: ZColors.textPrimary, letterSpacing: -0.4 },
-  subtitle: { fontSize: 13, color: ZColors.textSecondary, lineHeight: 20 },
-  formCard: {
-    backgroundColor: ZColors.creamCard,
-    borderRadius: ZRadius.card,
-    padding: 16,
-    gap: 10,
-  },
-  label: { fontSize: 13, fontWeight: '700', color: ZColors.textPrimary },
+  safe: { flex: 1 },
+  scroll: { padding: 20, paddingBottom: 140, gap: 18, flexGrow: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
+  brand: { fontSize: 24, fontFamily: ZFont.display, color: ZColors.forest, letterSpacing: -0.6 },
+  stepText: { fontSize: 11.5, fontFamily: ZFont.bold, color: ZColors.forest, paddingHorizontal: 12, paddingVertical: 6 },
+  hero: { alignItems: 'center', gap: 6, marginTop: 4 },
+  title: { fontSize: 30, fontFamily: ZFont.display, color: ZColors.ink, letterSpacing: -0.9, textAlign: 'center', marginTop: -4 },
+  subtitle: { fontSize: 14, color: ZColors.textSecondary, lineHeight: 21, textAlign: 'center', fontFamily: ZFont.regular, maxWidth: 330 },
+  formCard: { padding: 18, gap: 10 },
+  label: { fontSize: 13, fontFamily: ZFont.bold, color: ZColors.textPrimary },
   inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: ZColors.cream,
-    borderRadius: ZRadius.small,
-    borderWidth: 1,
-    borderColor: ZColors.creamDark,
-    minHeight: 54,
-    paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 16,
+    borderWidth: 1.5, borderColor: ZColors.hairline, minHeight: 56, paddingHorizontal: 16,
   },
-  countryCode: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: ZColors.forest,
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    color: ZColors.textPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  primaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: ZColors.olive,
-    borderRadius: ZRadius.pill,
-    paddingVertical: 16,
-    marginTop: 6,
-    shadowColor: ZColors.forest,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  primaryText: { fontSize: 16, fontWeight: '700', color: ZColors.cream },
+  inputFocus: { borderColor: ZColors.sageMid, backgroundColor: '#FFFFFF', shadowColor: ZColors.sageMid, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 2 },
+  countryCode: { fontSize: 16, fontFamily: ZFont.bold, color: ZColors.forest },
+  sep: { width: 1, height: 22, backgroundColor: ZColors.hairline },
+  input: { flex: 1, color: ZColors.textPrimary, fontSize: 17, fontFamily: ZFont.semibold, paddingVertical: 12, ...webNoOutline },
   otpBlock: { gap: 10, marginTop: 8 },
-  sentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(212, 227, 200, 0.55)',
-    borderRadius: ZRadius.small,
-    padding: 10,
-  },
-  sentText: { flex: 1, fontSize: 12, color: ZColors.textSecondary, fontWeight: '600' },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    backgroundColor: ZColors.coralLight,
-    borderRadius: ZRadius.small,
-    padding: 10,
-  },
-  errorText: { flex: 1, fontSize: 12, color: ZColors.coralDeep, fontWeight: '700' },
-  otpInput: {
-    color: ZColors.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-  continueBtn: { marginTop: 2 },
-  supportLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-  },
-  supportText: { fontSize: 13, fontWeight: '700', color: ZColors.coralDeep },
+  sentRow: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(212, 227, 200, 0.55)', borderRadius: 12, padding: 10 },
+  sentText: { flex: 1, fontSize: 12.5, color: ZColors.textSecondary, fontFamily: ZFont.semibold },
+  errorBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: ZColors.coralLight, borderRadius: 12, padding: 10 },
+  errorText: { flex: 1, fontSize: 12.5, color: ZColors.coralDeep, fontFamily: ZFont.bold },
+  otpInput: { fontSize: 20, fontFamily: ZFont.heavy, letterSpacing: 6 },
+  supportLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, alignSelf: 'center' },
+  supportText: { fontSize: 14, fontFamily: ZFont.bold, color: ZColors.coralDeep },
 });

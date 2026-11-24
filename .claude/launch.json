@@ -8,6 +8,13 @@
       "port": 3200
     },
     {
+      "name": "mobile-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "mobile", "run", "web"],
+      "env": { "CI": "1", "BROWSER": "none", "NODE_OPTIONS": "--max-old-space-size=6144" },
+      "port": 8082
+    },
+    {
       "name": "expo-web",
       "url": "http://localhost:8081"
     }

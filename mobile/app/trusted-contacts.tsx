@@ -1,10 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Backdrop } from '@/components/z/backdrop';
+import { PressScale } from '@/components/z/press';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { ZColors, ZFont, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 import { getAuthSession } from '@/lib/auth-session';
 import {
   addContact, deleteContact, listContacts, RELATIONSHIPS, RELATIONSHIP_LABEL, reorderContacts, updateContact,
@@ -72,9 +74,9 @@ export default function TrustedContactsScreen() {
 
   const startAdd = () => { explainerSeen = true; setIntro(false); setDraft({ ...emptyDraft }); };
 
-  return <SafeAreaView style={styles.root}>
+  return <View style={{ flex: 1 }}><Backdrop /><SafeAreaView style={styles.root}>
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Back"><MaterialIcons name="arrow-back" size={26} color={ZColors.forest} /></TouchableOpacity>
+      <PressScale onPress={() => router.back()} accessibilityLabel="Back"><MaterialIcons name="arrow-back" size={26} color={ZColors.forest} /></PressScale>
       <Text style={styles.title}>People I trust</Text>
       <View style={{ width: 26 }} />
     </View>
@@ -89,23 +91,23 @@ export default function TrustedContactsScreen() {
         </>}
         <Text style={styles.label}>Who are they to you?</Text>
         <View style={styles.chips}>
-          {RELATIONSHIPS.map(r => <TouchableOpacity key={r} style={[styles.chip, draft.relationship === r && styles.chipOn]} onPress={() => setDraft({ ...draft, relationship: r })}>
+          {RELATIONSHIPS.map(r => <PressScale key={r} style={[styles.chip, draft.relationship === r && styles.chipOn]} onPress={() => setDraft({ ...draft, relationship: r })}>
             <Text style={[styles.chipText, draft.relationship === r && styles.chipTextOn]}>{RELATIONSHIP_LABEL[r]}</Text>
-          </TouchableOpacity>)}
+          </PressScale>)}
         </View>
         <Text style={styles.label}>Send messages by</Text>
         <View style={styles.chips}>
-          {(['WHATSAPP', 'SMS'] as const).map(c => <TouchableOpacity key={c} style={[styles.chip, draft.channel === c && styles.chipOn]} onPress={() => setDraft({ ...draft, channel: c })}>
+          {(['WHATSAPP', 'SMS'] as const).map(c => <PressScale key={c} style={[styles.chip, draft.channel === c && styles.chipOn]} onPress={() => setDraft({ ...draft, channel: c })}>
             <Text style={[styles.chipText, draft.channel === c && styles.chipTextOn]}>{c === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}</Text>
-          </TouchableOpacity>)}
+          </PressScale>)}
         </View>
-        <TouchableOpacity style={styles.primary} disabled={saving} onPress={() => void save()}><Text style={styles.primaryText}>{saving ? 'Saving...' : 'Save'}</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.ghost} onPress={() => { setDraft(null); setError(''); }}><Text style={styles.ghostText}>Cancel</Text></TouchableOpacity>
+        <PressScale style={styles.primary} disabled={saving} onPress={() => void save()}><Text style={styles.primaryText}>{saving ? 'Saving...' : 'Save'}</Text></PressScale>
+        <PressScale style={styles.ghost} onPress={() => { setDraft(null); setError(''); }}><Text style={styles.ghostText}>Cancel</Text></PressScale>
       </View> : <>
         {(intro || contacts.length === 0) && <View style={styles.explainer}>
           <MaterialIcons name="favorite-border" size={24} color={ZColors.olive} />
           <Text style={styles.explainerText}>{EXPLAINER}</Text>
-          {intro && <TouchableOpacity onPress={() => { explainerSeen = true; setIntro(false); }}><Text style={styles.link}>Got it</Text></TouchableOpacity>}
+          {intro && <PressScale onPress={() => { explainerSeen = true; setIntro(false); }}><Text style={styles.link}>Got it</Text></PressScale>}
         </View>}
         {contacts.map((c, i) => <View key={c.id} style={styles.card}>
           <View style={styles.row}>
@@ -115,61 +117,61 @@ export default function TrustedContactsScreen() {
               <Text style={styles.meta}>{i === 0 ? 'Offered first' : `Offered ${i === 1 ? 'second' : 'third'}`}</Text>
             </View>
             <View style={styles.arrows}>
-              <TouchableOpacity disabled={saving || i === 0} onPress={() => void move(i, -1)} accessibilityLabel={`Move ${c.name} up`}>
+              <PressScale disabled={saving || i === 0} onPress={() => void move(i, -1)} accessibilityLabel={`Move ${c.name} up`}>
                 <MaterialIcons name="keyboard-arrow-up" size={28} color={i === 0 ? ZColors.sage : ZColors.forest} />
-              </TouchableOpacity>
-              <TouchableOpacity disabled={saving || i === contacts.length - 1} onPress={() => void move(i, 1)} accessibilityLabel={`Move ${c.name} down`}>
+              </PressScale>
+              <PressScale disabled={saving || i === contacts.length - 1} onPress={() => void move(i, 1)} accessibilityLabel={`Move ${c.name} down`}>
                 <MaterialIcons name="keyboard-arrow-down" size={28} color={i === contacts.length - 1 ? ZColors.sage : ZColors.forest} />
-              </TouchableOpacity>
+              </PressScale>
             </View>
           </View>
           {confirmId === c.id ? <View style={styles.confirm}>
             <Text style={styles.confirmText}>Delete {c.name}? Their name and number are erased for good.</Text>
             <View style={styles.row}>
-              <TouchableOpacity style={styles.danger} disabled={saving} onPress={() => void remove(c.id)}><Text style={styles.dangerText}>Delete</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.ghost} onPress={() => setConfirmId(null)}><Text style={styles.ghostText}>Keep</Text></TouchableOpacity>
+              <PressScale style={styles.danger} disabled={saving} onPress={() => void remove(c.id)}><Text style={styles.dangerText}>Delete</Text></PressScale>
+              <PressScale style={styles.ghost} onPress={() => setConfirmId(null)}><Text style={styles.ghostText}>Keep</Text></PressScale>
             </View>
           </View> : <View style={styles.row}>
-            <TouchableOpacity onPress={() => setDraft({ id: c.id, name: c.name, phone: '', relationship: c.relationship, channel: c.channel })}><Text style={styles.link}>Edit</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => setConfirmId(c.id)}><Text style={[styles.link, { color: ZColors.coralDeep }]}>Delete</Text></TouchableOpacity>
+            <PressScale onPress={() => setDraft({ id: c.id, name: c.name, phone: '', relationship: c.relationship, channel: c.channel })}><Text style={styles.link}>Edit</Text></PressScale>
+            <PressScale onPress={() => setConfirmId(c.id)}><Text style={[styles.link, { color: ZColors.coralDeep }]}>Delete</Text></PressScale>
           </View>}
         </View>)}
-        {contacts.length < MAX && <TouchableOpacity style={styles.primary} onPress={startAdd}><Text style={styles.primaryText}>Add someone you trust</Text></TouchableOpacity>}
+        {contacts.length < MAX && <PressScale style={styles.primary} onPress={startAdd}><Text style={styles.primaryText}>Add someone you trust</Text></PressScale>}
         {contacts.length >= MAX && <Text style={styles.meta}>You have added the most people you can (3).</Text>}
-        <TouchableOpacity style={styles.ghost} onPress={() => router.push('/contact-log' as Href)}><Text style={styles.ghostText}>See messages sent on your behalf</Text></TouchableOpacity>
+        <PressScale style={styles.ghost} onPress={() => router.push('/contact-log' as Href)}><Text style={styles.ghostText}>See messages sent on your behalf</Text></PressScale>
       </>}
       {!!error && <Text style={styles.error}>{error}</Text>}
     </ScrollView>
-  </SafeAreaView>;
+  </SafeAreaView></View>;
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: ZColors.cream },
+  root: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
-  title: { color: ZColors.textPrimary, fontSize: 20, fontWeight: '700' },
+  title: { color: ZColors.textPrimary, fontSize: 20, fontFamily: ZFont.bold },
   content: { padding: 20, paddingTop: 0, gap: 14 },
-  explainer: { backgroundColor: ZColors.sageLight, borderRadius: ZRadius.card, padding: 16, gap: 10 },
-  explainerText: { color: ZColors.forest, fontSize: 14, lineHeight: 21 },
-  card: { backgroundColor: '#fff', borderRadius: ZRadius.card, padding: 16, gap: 10, ...ZShadow.card },
-  cardTitle: { color: ZColors.textPrimary, fontSize: 17, fontWeight: '700' },
-  meta: { color: ZColors.textMuted, fontSize: 13, marginTop: 2 },
+  explainer: { backgroundColor: ZColors.sageLight, borderRadius: ZRadius.cardLg, padding: 16, gap: 10 },
+  explainerText: { color: ZColors.forest, fontFamily: ZFont.regular, fontSize: 14, lineHeight: 21 },
+  card: { backgroundColor: '#fff', borderRadius: ZRadius.cardLg, padding: 16, gap: 10, ...ZShadow.lifted },
+  cardTitle: { color: ZColors.textPrimary, fontSize: 17, fontFamily: ZFont.bold },
+  meta: { color: ZColors.textMuted, fontFamily: ZFont.regular, fontSize: 13, marginTop: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   arrows: { alignItems: 'center' },
-  label: { color: ZColors.textSecondary, fontSize: 13, fontWeight: '600' },
-  input: { backgroundColor: ZColors.cream, borderRadius: ZRadius.small, padding: 12, fontSize: 16, color: ZColors.textPrimary },
+  label: { color: ZColors.textSecondary, fontSize: 13, fontFamily: ZFont.semibold },
+  input: { backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: ZRadius.small, padding: 12, fontFamily: ZFont.regular, fontSize: 16, color: ZColors.textPrimary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderRadius: ZRadius.pill, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: ZColors.creamCard },
+  chip: { borderRadius: ZRadius.pill, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF' },
   chipOn: { backgroundColor: ZColors.forest },
-  chipText: { color: ZColors.textSecondary, fontWeight: '600' },
+  chipText: { color: ZColors.textSecondary, fontFamily: ZFont.semibold },
   chipTextOn: { color: '#fff' },
-  primary: { backgroundColor: ZColors.olive, borderRadius: ZRadius.pill, paddingVertical: 15, alignItems: 'center' },
-  primaryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  primary: { backgroundColor: ZColors.olive, borderRadius: 20, paddingVertical: 16, alignItems: 'center', paddingHorizontal: 18, flexDirection: 'row', justifyContent: 'center', gap: 8, borderTopWidth: 1.5, borderTopColor: 'rgba(255,255,255,0.35)', ...ZShadow.glow },
+  primaryText: { color: '#fff', fontFamily: ZFont.bold, fontSize: 16 },
   ghost: { paddingVertical: 10, alignItems: 'center' },
-  ghostText: { color: ZColors.textSecondary, fontWeight: '600' },
-  link: { color: ZColors.olive, fontWeight: '700', fontSize: 14 },
+  ghostText: { color: ZColors.textSecondary, fontFamily: ZFont.semibold },
+  link: { color: ZColors.olive, fontFamily: ZFont.bold, fontSize: 14 },
   confirm: { backgroundColor: ZColors.coralLight, borderRadius: ZRadius.small, padding: 12, gap: 8 },
-  confirmText: { color: ZColors.textPrimary, fontSize: 14 },
-  danger: { backgroundColor: ZColors.coralDeep, borderRadius: ZRadius.pill, paddingHorizontal: 20, paddingVertical: 10 },
-  dangerText: { color: '#fff', fontWeight: '700' },
-  error: { color: ZColors.coralDeep, fontSize: 14, textAlign: 'center' },
+  confirmText: { color: ZColors.textPrimary, fontFamily: ZFont.regular, fontSize: 14 },
+  danger: { backgroundColor: ZColors.coralDeep, borderRadius: 18, paddingHorizontal: 20, paddingVertical: 11, borderTopWidth: 1.5, borderTopColor: 'rgba(255,255,255,0.35)', ...ZShadow.subtle },
+  dangerText: { color: '#fff', fontFamily: ZFont.bold },
+  error: { color: ZColors.coralDeep, fontFamily: ZFont.regular, fontSize: 14, textAlign: 'center' },
 });

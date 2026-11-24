@@ -1,4 +1,5 @@
 import type { VoiceClient, VoiceClientOptions, VoiceEvent } from './voice-client-types';
+import { LevelMeter, rmsInt16, toLevel } from './voice-levels';
 
 const CAPTURE_WORKLET = `
 class PcmCapture extends AudioWorkletProcessor {
@@ -52,6 +53,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   const playing = new Set<AudioBufferSourceNode>();
   const lastSource = new Map<number, AudioBufferSourceNode>();
   let ended = false;
+  const meter = new LevelMeter();
 
   const send = (value: Record<string, unknown>) => {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ v: 1, ...value }));
@@ -59,7 +61,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   const stopPlayback = () => {
     currentGeneration = '';
     for (const source of playing) { try { source.stop(); } catch {} }
-    playing.clear(); lastSource.clear(); queuedEnvelope = null;
+    playing.clear(); lastSource.clear(); queuedEnvelope = null; meter.clearPlayback();
     nextPlaybackTime = playbackContext?.currentTime ?? 0;
   };
   const cleanup = () => {
@@ -82,6 +84,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     // Back-to-back chunks play seamlessly; after a start or an underrun, rebuild a small cushion first.
     const when = nextPlaybackTime > playbackContext.currentTime ? nextPlaybackTime : playbackContext.currentTime + PLAYBACK_LEAD_S;
     source.start(when);
+    meter.schedule(channel, 24000, when);
     nextPlaybackTime = when + audio.duration;
     if (typeof envelope.segmentIndex === 'number') lastSource.set(envelope.segmentIndex, source);
   };
@@ -94,6 +97,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     await captureContext.audioWorklet.addModule(workletUrl);
     worklet = new AudioWorkletNode(captureContext, 'zindagi-pcm-capture');
     worklet.port.onmessage = event => {
+      meter.pushMic(toLevel(rmsInt16(new Int16Array(event.data as ArrayBuffer))));
       if (socket?.readyState === WebSocket.OPEN && socket.bufferedAmount < 64 * 1024) socket.send(event.data);
       else if (socket?.readyState === WebSocket.OPEN) options.onError('Microphone network buffer is full.');
     };
@@ -175,5 +179,6 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     },
     end() { if (ended) return; send({ type: 'end' }); cleanup(); setTimeout(() => socket?.close(), 10_000); },
     mute(value: boolean) { send({ type: value ? 'mute' : 'unmute' }); },
+    levels() { return meter.read(playbackContext ? playbackContext.currentTime : null); },
   };
 }

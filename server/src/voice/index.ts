@@ -147,6 +147,7 @@ class VoiceSession {
     admitting++;
     try {
       const auth = await consumeVoiceTicket(ticket);
+      if (this.closedDuringHandshake()) return;
       if (!auth) { this.fail('invalid_ticket', false); return; }
       const llm = lisaLlm();
       if (!sttConfigured() || !config.sarvamApiKey || !llm.url || !llm.model ||
@@ -167,6 +168,9 @@ class VoiceSession {
       // TTS socket opens in parallel with STT; a failure here is retried lazily on the first clause.
       const ttsOpen = this.tts.open().catch(() => console.warn(`[voice] ${this.id} tts_open_failed`));
       await Promise.all([this.stt.connect(), ttsOpen]);
+      // The socket may have closed (or the handshake timed out) while we were connecting: end() already ran,
+      // so registering now would leak a capacity slot forever.
+      if (this.closedDuringHandshake()) return;
       this.acoustic = new AcousticAnalyzer(value => this.event('acoustic', value));
       active.add(this);
       this.state = 'listening';
@@ -179,6 +183,14 @@ class VoiceSession {
       void this.greet();
     } catch { this.fail('voice_start_failed', false); }
     finally { admitting--; }
+  }
+
+  /** True once end() has run mid-handshake; closes any provider sockets opened after it, since end() could not see them. */
+  private closedDuringHandshake() {
+    if (this.state === 'connecting') return false;
+    this.stt?.close();
+    this.tts?.close();
+    return true;
   }
 
   private currentState(): State { return this.state; }

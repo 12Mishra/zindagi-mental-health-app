@@ -1,6 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -9,12 +8,13 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { Backdrop } from '@/components/z/backdrop';
+import { PressScale } from '@/components/z/press';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { ZColors, ZFont, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 
 const SEX_OPTIONS = ['Female', 'Male', 'Non-binary', 'Prefer not to say'];
 
@@ -58,8 +58,7 @@ export default function ProfileDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar style="dark" backgroundColor={ZColors.cream} />
+    <View style={{ flex: 1 }}><Backdrop /><SafeAreaView style={s.safe}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -70,9 +69,9 @@ export default function ProfileDetailsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={s.header}>
-            <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} activeOpacity={0.75}>
+            <PressScale onPress={() => router.back()} style={s.iconBtn}>
               <MaterialIcons name="arrow-back" size={20} color={ZColors.forest} />
-            </TouchableOpacity>
+            </PressScale>
             <View style={s.stepBadge}>
               <Text style={s.stepText}>Step 2 of 3</Text>
             </View>
@@ -117,15 +116,14 @@ export default function ProfileDetailsScreen() {
                 {SEX_OPTIONS.map(option => {
                   const selected = sex === option;
                   return (
-                    <TouchableOpacity
+                    <PressScale
                       key={option}
                       onPress={() => setSex(option)}
-                      activeOpacity={0.75}
                       style={[s.choice, selected && s.choiceSelected]}
                     >
                       {selected && <MaterialIcons name="check" size={14} color={ZColors.cream} />}
                       <Text style={[s.choiceText, selected && s.choiceTextSelected]}>{option}</Text>
-                    </TouchableOpacity>
+                    </PressScale>
                   );
                 })}
               </View>
@@ -139,18 +137,17 @@ export default function ProfileDetailsScreen() {
             </View>
           ) : null}
 
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <PressScale
             disabled={!canContinue}
             onPress={handleContinue}
             style={[s.primaryBtn, { opacity: canContinue ? 1 : 0.45 }]}
           >
             <Text style={s.primaryText}>Continue</Text>
             <MaterialIcons name="arrow-forward" size={18} color={ZColors.cream} />
-          </TouchableOpacity>
+          </PressScale>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeAreaView></View>
   );
 }
 
@@ -193,7 +190,7 @@ function Field({
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: ZColors.cream },
+  safe: { flex: 1, backgroundColor: 'transparent' },
   scroll: { padding: 20, gap: 16, flexGrow: 1 },
   header: {
     flexDirection: 'row',
@@ -205,7 +202,7 @@ const s = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: ZColors.creamCard,
+    backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -215,28 +212,28 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
-  stepText: { fontSize: 11, fontWeight: '700', color: ZColors.forest },
+  stepText: { fontSize: 11, fontFamily: ZFont.bold, color: ZColors.forest },
   promptCard: {
     backgroundColor: ZColors.sageLight,
-    borderRadius: ZRadius.card,
+    borderRadius: ZRadius.cardLg,
     padding: 20,
     gap: 6,
   },
-  brand: { fontSize: 18, fontWeight: '800', color: ZColors.forest },
-  title: { fontSize: 25, fontWeight: '800', color: ZColors.textPrimary, letterSpacing: -0.4 },
-  subtitle: { fontSize: 13, color: ZColors.textSecondary, lineHeight: 20 },
+  brand: { fontSize: 18, fontFamily: ZFont.heavy, color: ZColors.forest },
+  title: { fontSize: 25, fontFamily: ZFont.heavy, color: ZColors.textPrimary, letterSpacing: -0.4 },
+  subtitle: { fontFamily: ZFont.regular, fontSize: 13, color: ZColors.textSecondary, lineHeight: 20 },
   formCard: {
-    backgroundColor: ZColors.creamCard,
-    borderRadius: ZRadius.card,
+    backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF',
+    borderRadius: ZRadius.cardLg,
     padding: 16,
     gap: 16,
   },
-  label: { fontSize: 13, fontWeight: '700', color: ZColors.textPrimary },
+  label: { fontSize: 13, fontFamily: ZFont.bold, color: ZColors.textPrimary },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: ZColors.cream,
+    backgroundColor: 'rgba(255,255,255,0.7)',
     borderRadius: ZRadius.small,
     borderWidth: 1,
     borderColor: ZColors.creamDark,
@@ -247,7 +244,7 @@ const s = StyleSheet.create({
     flex: 1,
     color: ZColors.textPrimary,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: ZFont.semibold,
   },
   choiceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   choice: {
@@ -264,7 +261,7 @@ const s = StyleSheet.create({
   choiceSelected: { backgroundColor: ZColors.olive },
   choiceText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: ZFont.bold,
     color: ZColors.textSecondary,
     textAlign: 'center',
   },
@@ -277,7 +274,7 @@ const s = StyleSheet.create({
     borderRadius: ZRadius.small,
     padding: 10,
   },
-  errorText: { flex: 1, fontSize: 12, color: ZColors.coralDeep, fontWeight: '700' },
+  errorText: { flex: 1, fontSize: 12, color: ZColors.coralDeep, fontFamily: ZFont.bold },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -292,5 +289,5 @@ const s = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  primaryText: { fontSize: 16, fontWeight: '700', color: ZColors.cream },
+  primaryText: { fontSize: 16, fontFamily: ZFont.bold, color: ZColors.cream },
 });

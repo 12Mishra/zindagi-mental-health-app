@@ -1,11 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Backdrop } from '@/components/z/backdrop';
+import { PressScale } from '@/components/z/press';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ZColors, ZRadius, ZShadow } from '@/constants/zindagi-theme';
+import { ZColors, ZFont, ZRadius, ZShadow } from '@/constants/zindagi-theme';
 import { registerWithOtp } from '@/lib/auth-api';
 import { setAuthSession } from '@/lib/auth-session';
 
@@ -87,13 +88,12 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar style="dark" backgroundColor={ZColors.cream} />
+    <View style={{ flex: 1 }}><Backdrop /><SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} activeOpacity={0.75}>
+          <PressScale onPress={() => router.back()} style={s.iconBtn}>
             <MaterialIcons name="arrow-back" size={20} color={ZColors.forest} />
-          </TouchableOpacity>
+          </PressScale>
           <View style={s.stepBadge}>
             <Text style={s.stepText}>Step 3 of 3</Text>
           </View>
@@ -118,9 +118,8 @@ export default function HistoryScreen() {
             const isSensitive =
               option === 'Self-harm thoughts' || option === 'Suicide attempt history';
             return (
-              <TouchableOpacity
+              <PressScale
                 key={option}
-                activeOpacity={0.75}
                 onPress={() => toggle(option)}
                 style={[
                   s.historyBtn,
@@ -141,7 +140,7 @@ export default function HistoryScreen() {
                 >
                   {option}
                 </Text>
-              </TouchableOpacity>
+              </PressScale>
             );
           })}
         </View>
@@ -165,27 +164,26 @@ export default function HistoryScreen() {
           </View>
         ) : null}
 
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <PressScale
           disabled={isSubmitting}
           onPress={handleFinish}
           style={[s.primaryBtn, { opacity: isSubmitting ? 0.45 : 1 }]}
         >
           <Text style={s.primaryText}>{isSubmitting ? 'Creating account...' : 'Finish setup'}</Text>
           <MaterialIcons name="arrow-forward" size={18} color={ZColors.cream} />
-        </TouchableOpacity>
+        </PressScale>
 
-        <TouchableOpacity style={s.supportLink} activeOpacity={0.75}>
+        <PressScale style={s.supportLink}>
           <MaterialIcons name="phone-in-talk" size={14} color={ZColors.coralDeep} />
           <Text style={s.supportText}>I need immediate support</Text>
-        </TouchableOpacity>
+        </PressScale>
       </ScrollView>
-    </SafeAreaView>
+    </SafeAreaView></View>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: ZColors.cream },
+  safe: { flex: 1, backgroundColor: 'transparent' },
   scroll: { padding: 20, gap: 16, flexGrow: 1 },
   header: {
     flexDirection: 'row',
@@ -197,7 +195,7 @@ const s = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: ZColors.creamCard,
+    backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -207,10 +205,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
-  stepText: { fontSize: 11, fontWeight: '700', color: ZColors.forest },
+  stepText: { fontSize: 11, fontFamily: ZFont.bold, color: ZColors.forest },
   promptCard: {
     backgroundColor: ZColors.sageLight,
-    borderRadius: ZRadius.card,
+    borderRadius: ZRadius.cardLg,
     padding: 20,
     gap: 7,
   },
@@ -223,9 +221,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brand: { fontSize: 18, fontWeight: '800', color: ZColors.forest },
-  title: { fontSize: 25, fontWeight: '800', color: ZColors.textPrimary, letterSpacing: -0.4 },
-  subtitle: { fontSize: 13, color: ZColors.textSecondary, lineHeight: 20 },
+  brand: { fontSize: 18, fontFamily: ZFont.heavy, color: ZColors.forest },
+  title: { fontSize: 25, fontFamily: ZFont.heavy, color: ZColors.textPrimary, letterSpacing: -0.4 },
+  subtitle: { fontFamily: ZFont.regular, fontSize: 13, color: ZColors.textSecondary, lineHeight: 20 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   historyBtn: {
     flexDirection: 'row',
@@ -243,7 +241,7 @@ const s = StyleSheet.create({
   sensitiveSelected: { backgroundColor: ZColors.coralDeep },
   historyText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: ZFont.bold,
     color: ZColors.textSecondary,
     textAlign: 'center',
   },
@@ -253,11 +251,11 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 7,
-    backgroundColor: ZColors.creamCard,
+    backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF',
     borderRadius: ZRadius.small,
     padding: 12,
   },
-  hintText: { flex: 1, fontSize: 12, color: ZColors.textMuted, lineHeight: 17 },
+  hintText: { flex: 1, fontFamily: ZFont.regular, fontSize: 12, color: ZColors.textMuted, lineHeight: 17 },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -266,7 +264,7 @@ const s = StyleSheet.create({
     borderRadius: ZRadius.small,
     padding: 10,
   },
-  errorText: { flex: 1, fontSize: 12, color: ZColors.coralDeep, fontWeight: '700' },
+  errorText: { flex: 1, fontSize: 12, color: ZColors.coralDeep, fontFamily: ZFont.bold },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -281,7 +279,7 @@ const s = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  primaryText: { fontSize: 16, fontWeight: '700', color: ZColors.cream },
+  primaryText: { fontSize: 16, fontFamily: ZFont.bold, color: ZColors.cream },
   supportLink: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,5 +287,5 @@ const s = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
   },
-  supportText: { fontSize: 13, fontWeight: '700', color: ZColors.coralDeep },
+  supportText: { fontSize: 13, fontFamily: ZFont.bold, color: ZColors.coralDeep },
 });
