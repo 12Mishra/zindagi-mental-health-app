@@ -101,6 +101,9 @@ export const login = async (phoneNumber: string, otp: string, req: Request) => {
 
   await consumeOtp(phoneNumber, otp);
 
+  // Catches students who registered before their institution existed. A no-op once linked.
+  await linkUserToInstitution(user.id).catch(() => console.warn('[auth] institution_link_failed'));
+
   const session = await createSession(user.id, req);
   return { user, session };
 };

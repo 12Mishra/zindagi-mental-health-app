@@ -34,3 +34,23 @@ export async function linkUserToInstitution(userId: string): Promise<void> {
     }
   }
 }
+
+/**
+ * Links every not-yet-linked student whose `college` matches this institution's name or slug. For students who
+ * signed up before the institution existed (signup links only once). Idempotent; returns how many were linked.
+ */
+export async function linkExistingStudents(institutionId: string): Promise<number> {
+  const institution = await prisma.institution.findUniqueOrThrow({ where: { id: institutionId }, select: { name: true, slug: true } });
+  const candidates = await prisma.user.findMany({
+    where: { OR: [{ institutionId: null }, { pseudonym: null }] },
+    select: { id: true, college: true },
+  });
+  const matches = (college: string) => [institution.name, institution.slug].some(v => v.toLowerCase() === college.trim().toLowerCase());
+  let linked = 0;
+  for (const user of candidates) {
+    if (!matches(user.college)) continue;
+    await linkUserToInstitution(user.id);
+    linked++;
+  }
+  return linked;
+}

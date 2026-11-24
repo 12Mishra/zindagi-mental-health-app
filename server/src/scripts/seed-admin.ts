@@ -10,6 +10,7 @@
 import { randomBytes } from 'node:crypto';
 import { prisma } from '../db';
 import { hashPassword } from '../staff/password';
+import { linkExistingStudents } from '../insights/pseudonym';
 
 async function main() {
   if (process.env.NODE_ENV === 'production') throw new Error('seed:admin is for development only.');
@@ -38,7 +39,9 @@ async function main() {
     await prisma.therapistProfile.upsert({ where: { staffUserId: staff.id }, update: {}, create: { staffUserId: staff.id, languages: ['en', 'hi'], specialties: [] } });
   }
 
+  const linked = await linkExistingStudents(institution.id);
   console.log(`Institution: ${institution.name} (${institution.slug}). Students whose college matches this name are linked automatically.`);
+  console.log(`Linked ${linked} existing student${linked === 1 ? '' : 's'} who signed up before this institution existed.`);
   console.log(`Admin: ${adminEmail}; therapists: ${therapistEmails.join(', ') || '(none)'}`);
   if (!process.env.SEED_STAFF_PASSWORD) console.log(`Generated staff password (shown once): ${password}`);
 }
