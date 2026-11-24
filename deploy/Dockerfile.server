@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1
+# Build context is the repository root (see deploy/docker-compose.yml), because the server
+# needs both server/ and nothing else — but keeping the context at the root avoids surprises
+# if the layout moves.
+
+FROM node:22-bookworm-slim AS build
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# prisma.config.ts reads DATABASE_URL even for `generate`; a throwaway value keeps the build hermetic.
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build"
+
+COPY server/package.json server/package-lock.json ./
+RUN npm ci
+
+COPY server/tsconfig.json server/prisma.config.ts ./
+COPY server/prisma ./prisma
+COPY server/src ./src
+
+# The Prisma client is generated into src/generated/prisma and compiled by tsc into dist/.
+RUN npx prisma generate && npm run build
+
+FROM node:22-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# node_modules stays complete on purpose: the Prisma CLI lives in devDependencies and is what
+# runs `migrate deploy` against the database on the first boot.
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build /app/package.json ./package.json
+# Belt and braces for the generated client's non-TS runtime files, if the generator emits any.
+COPY --from=build /app/src/generated ./src/generated
+
+USER node
+EXPOSE 4000 4001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:4000/health || exit 1
+
+# Overridden per service: dist/voice/index.js and dist/worker/summary-worker.js.
+CMD ["node", "dist/index.js"]

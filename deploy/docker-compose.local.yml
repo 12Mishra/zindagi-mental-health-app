@@ -1,0 +1,25 @@
+# Run the whole stack on this machine, without DNS or TLS.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+#
+# Differences from the VM setup:
+#   * caddy is scaled to 0 — the domain settings in deploy/.env are placeholders, and ACME
+#     would just retry forever. Put a real hostname in deploy/.env when you want TLS.
+#   * core and voice publish on every interface, so a phone on the same Wi-Fi can reach the API at
+#     http://<LAN-IP>:4000. Change the two port mappings to "127.0.0.1:4000:4000" to keep it local.
+#
+# For the Expo app set EXPO_PUBLIC_API_URL=http://<LAN-IP>:4000 and
+# EXPO_PUBLIC_VOICE_WS_URL=ws://<LAN-IP>:4001/voice in mobile/.env, then rebuild the bundle.
+
+services:
+  caddy:
+    deploy:
+      replicas: 0
+
+  core:
+    ports:
+      - "4000:4000"
+
+  voice:
+    ports:
+      - "4001:4001"

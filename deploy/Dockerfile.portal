@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+# Build context must be the portal directory (admin/ or therapist/).
+#
+# NEXT_PUBLIC_* values are inlined by Next at build time, not read at runtime, so the therapist
+# portal's chat socket URL has to be correct when this image is built.
+
+FROM node:22-bookworm-slim AS build
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_CORE_WS_URL=""
+ENV NEXT_PUBLIC_CORE_WS_URL=$NEXT_PUBLIC_CORE_WS_URL
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+# Next refuses to start without a public directory being present at build time for tracing purposes.
+RUN mkdir -p public && npm run build
+
+FROM node:22-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
+
+# Whole build output plus node_modules: robust, and provenance is irrelevant at this size.
+COPY --from=build /app ./
+
+USER node
+EXPOSE 3100 3200
+# Each portal's own start script pins its port (admin 3100, therapist 3200).
+CMD ["npm", "run", "start"]

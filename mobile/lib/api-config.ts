@@ -33,8 +33,8 @@ function resolveForDevice(url: string): string {
   return parsed.toString().replace(/\/$/, '');
 }
 
-export const API_URL = resolveForDevice(process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000');
-export const VOICE_WS_URL = resolveForDevice(process.env.EXPO_PUBLIC_VOICE_WS_URL ?? 'ws://localhost:4001/voice');
+export const API_URL = resolveForDevice(process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? 'http://localhost:4000' : ''));
+export const VOICE_WS_URL = resolveForDevice(process.env.EXPO_PUBLIC_VOICE_WS_URL ?? (__DEV__ ? 'ws://localhost:4001/voice' : ''));
 
 /** ws(s)://host + path on the API server. */
 export const apiSocketUrl = (path: string) => API_URL.replace(/^http/, 'ws').replace(/\/$/, '') + path;

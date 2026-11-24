@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://replacement-pichunter-setup-transparent.trycloudflare.com",
+        "EXPO_PUBLIC_VOICE_WS_URL": "wss://athletes-elevation-innovations-legislature.trycloudflare.com/voice"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://replacement-pichunter-setup-transparent.trycloudflare.com",
+        "EXPO_PUBLIC_VOICE_WS_URL": "wss://athletes-elevation-innovations-legislature.trycloudflare.com/voice"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  }
+}

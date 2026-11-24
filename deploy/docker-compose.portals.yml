@@ -1,0 +1,40 @@
+# Optional override: run the two Next.js portals on this VM too, instead of Freebuff Sites.
+#   docker compose -f docker-compose.yml -f docker-compose.portals.yml up -d --build
+#
+# NEXT_PUBLIC_CORE_WS_URL is compiled into the therapist bundle at build time, so it must be
+# correct before the image is built.
+
+services:
+  admin:
+    build:
+      context: ../admin
+      dockerfile: ../deploy/Dockerfile.portal
+    image: zindagi-admin:local
+    environment:
+      CORE_API_URL: https://${API_DOMAIN:?set API_DOMAIN in deploy/.env}
+      NODE_ENV: production
+    expose:
+      - "3100"
+    restart: unless-stopped
+
+  therapist:
+    build:
+      context: ../therapist
+      dockerfile: ../deploy/Dockerfile.portal
+      args:
+        NEXT_PUBLIC_CORE_WS_URL: wss://${API_DOMAIN:?set API_DOMAIN in deploy/.env}/chat/ws
+    image: zindagi-therapist:local
+    environment:
+      CORE_API_URL: https://${API_DOMAIN:?set API_DOMAIN in deploy/.env}
+      NODE_ENV: production
+    expose:
+      - "3200"
+    restart: unless-stopped
+
+  caddy:
+    environment:
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?set ADMIN_DOMAIN in deploy/.env}
+      COUNSELLOR_DOMAIN: ${COUNSELLOR_DOMAIN:?set COUNSELLOR_DOMAIN in deploy/.env}
+    depends_on:
+      - admin
+      - therapist

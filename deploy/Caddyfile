@@ -1,0 +1,30 @@
+# Full stack: API (+ /chat/ws), voice WebSocket, and — when the "portals" profile is enabled —
+# the two Next.js portals. Certificates are issued automatically; every hostname must already
+# resolve to this VM.
+#
+# The portal hostnames fall back to *.localhost so Caddy starts cleanly even when only the
+# core stack is deployed. Nothing reaches those two sites until the portals profile is up.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy core:4000
+}
+
+# No compression: this is a binary PCM WebSocket, not HTTP content.
+{$VOICE_DOMAIN} {
+	reverse_proxy voice:4001
+}
+
+{$ADMIN_DOMAIN:admin.localhost} {
+	encode zstd gzip
+	reverse_proxy admin:3100
+}
+
+{$COUNSELLOR_DOMAIN:counsellor.localhost} {
+	encode zstd gzip
+	reverse_proxy therapist:3200
+}

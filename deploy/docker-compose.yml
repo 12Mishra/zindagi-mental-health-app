@@ -1,0 +1,132 @@
+name: zindagi
+
+# Services: db, redis, core (API + /chat/ws), voice (WS :4001), worker (job loop), caddy (TLS).
+# Everything stateful is a named volume; the containers themselves are disposable.
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: zindagi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: zindagi
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zindagi -d zindagi"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    <<: *logging
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+    <<: *logging
+
+  core:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.server
+    image: zindagi-server:local
+    env_file:
+      - ../server/.env
+    # These win over server/.env: inside the network the database is `db`, not localhost.
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      VOICE_PORT: "4001"
+      DATABASE_URL: postgresql://zindagi:${POSTGRES_PASSWORD}@db:5432/zindagi
+      REDIS_URL: redis://redis:6379
+      PORTAL_ORIGINS: ${PORTAL_ORIGINS:-}
+      VOICE_ALLOWED_ORIGINS: ${VOICE_ALLOWED_ORIGINS:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "4000"
+    restart: unless-stopped
+    <<: *logging
+
+  # Same image, different entrypoint. Build it once with `docker compose build core`.
+  voice:
+    image: zindagi-server:local
+    pull_policy: never
+    command: ["node", "dist/voice/index.js"]
+    env_file:
+      - ../server/.env
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      VOICE_PORT: "4001"
+      DATABASE_URL: postgresql://zindagi:${POSTGRES_PASSWORD}@db:5432/zindagi
+      REDIS_URL: redis://redis:6379
+      PORTAL_ORIGINS: ${PORTAL_ORIGINS:-}
+      VOICE_ALLOWED_ORIGINS: ${VOICE_ALLOWED_ORIGINS:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "4001"
+    # The image healthcheck curls :4000/health, which only the core entrypoint serves, so this
+    # container would report `unhealthy` forever. The voice socket is verified separately.
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+    <<: *logging
+
+  worker:
+    image: zindagi-server:local
+    pull_policy: never
+    command: ["node", "dist/worker/summary-worker.js"]
+    env_file:
+      - ../server/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://zindagi:${POSTGRES_PASSWORD}@db:5432/zindagi
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+    # Same reason: a job loop serves no HTTP, so the image healthcheck cannot pass. Alive is the
+    # only meaningful signal, and `restart: unless-stopped` already handles it.
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+    <<: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in deploy/.env}
+      VOICE_DOMAIN: ${VOICE_DOMAIN:?set VOICE_DOMAIN in deploy/.env}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-admin.localhost}
+      COUNSELLOR_DOMAIN: ${COUNSELLOR_DOMAIN:-counsellor.localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - core
+      - voice
+    restart: unless-stopped
+    <<: *logging
+
+volumes:
+  db:
+  caddy_data:
+  caddy_config:

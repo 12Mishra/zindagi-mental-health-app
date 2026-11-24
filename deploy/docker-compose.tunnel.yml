@@ -1,0 +1,45 @@
+# Optional override: publish this machine through a Cloudflare Tunnel instead of Caddy + a public IP.
+# Use this when there is no public IPv4 (home PC, CGNAT, demo laptop).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
+#
+# What changes versus the VM setup:
+#   * caddy is scaled to 0 — Cloudflare terminates TLS, and :80/:443 stay closed.
+#   * one outbound-only cloudflared connection serves every hostname, so no port forwarding,
+#     no public IP, no router config.
+#   * hostnames and their upstreams are configured once in the Zero Trust dashboard:
+#       api.<domain>        -> http://core:4000        (REST + /chat/ws)
+#       voice.<domain>      -> http://voice:4001       (realtime audio)
+#       admin.<domain>      -> http://admin:3100       (portals override only)
+#       counsellor.<domain> -> http://therapist:3200   (portals override only)
+#
+# --protocol http2 is not optional. With the default `auto` transport cloudflared prefers QUIC,
+# and in that mode the `Upgrade: websocket` header can be dropped before it reaches the origin
+# (cloudflared#1652): the container sees a plain GET /chat/ws, answers 400, and browsers report
+# code 1006 without ever firing `open`. http2 also keeps long-lived sockets alive across the
+# aggressive UDP idle timers that some consumer routers apply to QUIC.
+
+services:
+  caddy:
+    deploy:
+      replicas: 0
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --protocol
+      - http2
+      - run
+      - --token
+      - ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in deploy/.env (Zero Trust -> Networks -> Tunnels -> install token)}
+    depends_on:
+      - core
+      - voice
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

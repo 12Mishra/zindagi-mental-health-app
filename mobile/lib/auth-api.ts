@@ -16,6 +16,9 @@ export class ApiError extends Error {
 }
 
 async function apiRequest<T>(path: string, options: ApiRequestOptions = {}) {
+  if (!API_URL) {
+    throw new ApiError('EXPO_PUBLIC_API_URL is not configured. Set it in the selected EAS build profile or mobile/.env.', 0);
+  }
   let response: Response;
 
   try {
