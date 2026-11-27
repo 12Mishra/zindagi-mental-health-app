@@ -29,3 +29,6 @@ training/**/runs/
 .expo/training/
 
 .env
+
+# Local LLM provider config (copy from llm.env.example)
+training/v2/config/llm.env
