@@ -161,7 +161,9 @@ export class DeepgramStream implements SttStream {
 export type LlmMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 export type LlmUsage = { promptTokens: number; completionTokens: number };
-export type LisaStreamOptions = { maxTokens?: number; onUsage?: (usage: LlmUsage) => void; onRequestSent?: () => void };
+export type LisaStreamOptions = { maxTokens?: number; onUsage?: (usage: LlmUsage) => void; onRequestSent?: () => void;
+  /** Give up if no token arrives in this long (0 = wait forever). A scaled-to-zero model host can take minutes to boot. */
+  firstTokenTimeoutMs?: number };
 
 /**
  * Chat templates such as Mistral's (llama.cpp, vLLM) reject anything but system?, user, assistant, user, ...
@@ -184,21 +186,36 @@ export async function* streamLisa(messages: LlmMessage[], signal: AbortSignal,
   const llm = lisaLlm();
   if (!llm.url || !llm.model) throw new Error('llm_not_configured');
   options.onRequestSent?.();
-  const response = await fetch(llm.url, {
-    method: 'POST', signal,
+  const firstTokenTimeoutMs = options.firstTokenTimeoutMs ?? config.voiceLlmFirstTokenTimeoutMs;
+  const firstToken = new AbortController();
+  const timer = firstTokenTimeoutMs > 0 ? setTimeout(() => firstToken.abort(), firstTokenTimeoutMs) : null;
+  const timedOut = () => firstToken.signal.aborted && !signal.aborted;
+  const requestSignal = AbortSignal.any([signal, firstToken.signal]);
+  let response: Response;
+  try {
+    response = await fetch(llm.url, {
+    method: 'POST', signal: requestSignal,
     headers: { 'Content-Type': 'application/json', ...(llm.apiKey ? { Authorization: `Bearer ${llm.apiKey}` } : {}) },
     // Temperature is only sent when configured, so the served model's own sampling settings (Lisa's Modelfile) apply.
     body: JSON.stringify({ model: llm.model, messages: alternateRoles(messages), stream: true,
       ...lisaTokenLimit(llm, options.maxTokens ?? config.voiceLlmMaxTokens), stream_options: { include_usage: true },
       ...(config.voiceLlmTemperature === null ? {} : { temperature: config.voiceLlmTemperature }) }),
   });
-  if (!response.ok || !response.body) throw new Error(`llm_http_${response.status}`);
+  } catch (error) {
+    if (timer) clearTimeout(timer);
+    if (timedOut()) throw new Error('llm_first_token_timeout');
+    throw error;
+  }
+  if (!response.ok || !response.body) { if (timer) clearTimeout(timer); throw new Error(`llm_http_${response.status}`); }
   const reader = response.body.getReader();
+  let gotToken = false;
   const decoder = new TextDecoder();
   let pending = '';
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try { chunk = await reader.read(); } catch (error) { if (timedOut()) throw new Error('llm_first_token_timeout'); throw error; }
+      const { done, value } = chunk;
       if (done) break;
       pending += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
       if (pending.length > 32_000) throw new Error('llm_stream_overflow');
@@ -214,16 +231,20 @@ export async function* streamLisa(messages: LlmMessage[], signal: AbortSignal,
           options.onUsage?.({ promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens });
         }
         const token = parsed.choices?.[0]?.delta?.content;
-        if (typeof token === 'string' && token) yield token;
+        if (typeof token === 'string' && token) {
+          if (!gotToken) { gotToken = true; if (timer) clearTimeout(timer); }
+          yield token;
+        }
       }
     }
-  } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  } finally { if (timer) clearTimeout(timer); await reader.cancel().catch(() => {}); reader.releaseLock(); }
 }
 
 /** Fire-and-forget 1-token request so the first real turn does not pay the model cold start. */
-export async function warmLisa(timeoutMs = 15_000) {
+// Long enough for a scaled-to-zero host (Modal) to finish a cold boot, so the student's first real turn finds it warm.
+export async function warmLisa(timeoutMs = 180_000) {
   try {
-    for await (const token of streamLisa([{ role: 'user', content: 'Hi' }], AbortSignal.timeout(timeoutMs), { maxTokens: 1 })) void token;
+    for await (const token of streamLisa([{ role: 'user', content: 'Hi' }], AbortSignal.timeout(timeoutMs), { maxTokens: 1, firstTokenTimeoutMs: 0 })) void token;
   } catch { /* warm-up is best effort */ }
 }
 

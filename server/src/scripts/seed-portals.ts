@@ -5,6 +5,10 @@
  * (Indian mobile numbers never start with 5), so they cannot collide with real users.
  *
  *   SEED_STAFF_PASSWORD=... npm run seed:portals
+ *   SEED_STUDENTS=12 SEED_QUIET=1 SEED_K_ANONYMITY=3 SEED_STAFF_PASSWORD=... npm run seed:portals
+ *
+ * SEED_QUIET=1 keeps the alert inbox empty: no risk history, no student with very low recent check-ins, and every
+ * opted-in student has checked in within the last few days, so none of the alert rules fire.
  */
 import { randomBytes } from 'node:crypto';
 import { prisma } from '../db';
@@ -17,7 +21,10 @@ if (process.env.NODE_ENV === 'production') throw new Error('seed-portals refuses
 
 const SLUG = 'tiet';
 const PHONE_PREFIX = '+915000000';
-const STUDENTS = 150;
+const STUDENTS = Math.max(1, Math.min(999, Number(process.env.SEED_STUDENTS) || 150));
+const QUIET = process.env.SEED_QUIET === '1';
+const K_ANONYMITY = Math.max(1, Number(process.env.SEED_K_ANONYMITY) || 10);
+const CONVERSATIONS = Math.max(Math.round(400 * STUDENTS / 150), Math.min(STUDENTS * 4, 400));
 const WEEKS = 12;
 const DAY = 86_400_000;
 
@@ -64,7 +71,7 @@ async function main() {
   await prisma.institution.deleteMany({ where: { slug: SLUG } });
 
   const institution = await prisma.institution.create({
-    data: { name: 'Thapar Institute of Engineering and Technology', slug: SLUG, kAnonymity: 10, pseudonymSalt: randomBytes(16).toString('hex') },
+    data: { name: 'Thapar Institute of Engineering and Technology', slug: SLUG, kAnonymity: K_ANONYMITY, pseudonymSalt: randomBytes(16).toString('hex') },
   });
 
   const staffData = [
@@ -111,15 +118,23 @@ async function main() {
     for (let d = 0; d < WEEKS * 7; d++) {
       const week = Math.floor(d / 7);
       if (rand() > (s.checkinOptIn ? 0.62 : 0.18)) continue;
-      const score = Math.max(1, Math.min(5, Math.round(s.baseline - examPressure(week) + gauss() * 0.7)));
-      checkins.push({ userId: s.id, score, tags: [pick(TAGS)], createdAt: new Date(startDay.getTime() + d * DAY + (8 + Math.floor(rand() * 14)) * 3_600_000) });
+      const recent = d >= WEEKS * 7 - 7;
+      const score = Math.max(QUIET && recent ? 2 : 1, Math.min(5, Math.round(s.baseline - examPressure(week) + gauss() * 0.7)));
+      const createdAt = new Date(startDay.getTime() + d * DAY + (8 + Math.floor(rand() * 14)) * 3_600_000);
+      if (createdAt.getTime() > now) continue;
+      checkins.push({ userId: s.id, score, tags: [pick(TAGS)], createdAt });
     }
+  }
+  // Quiet mode: an opted-in student who has gone silent for days would raise a disengagement alert.
+  if (QUIET) for (const s of students.filter(st => st.checkinOptIn)) {
+    const last = Math.max(0, ...checkins.filter(c => c.userId === s.id).map(c => c.createdAt.getTime()));
+    if (last < now - 2 * DAY) checkins.push({ userId: s.id, score: Math.max(2, Math.min(5, Math.round(s.baseline))), tags: [pick(TAGS)], createdAt: new Date(now - DAY) });
   }
   for (let i = 0; i < checkins.length; i += 2000) await prisma.moodCheckin.createMany({ data: checkins.slice(i, i + 2000) });
 
   // Ended conversations with topics (memory consent only, so no transcripts exist for synthetic students).
   const conversations: Array<{ userId: string; status: 'ENDED'; memoryConsent: boolean; topics: Topic[]; createdAt: Date; endedAt: Date }> = [];
-  for (let i = 0; i < 400; i++) {
+  for (let i = 0; i < CONVERSATIONS; i++) {
     const s = pick(students);
     const week = Math.floor(rand() * WEEKS);
     const at = new Date(startDay.getTime() + (week * 7 + Math.floor(rand() * 7)) * DAY + (9 + Math.floor(rand() * 12)) * 3_600_000);
@@ -130,7 +145,7 @@ async function main() {
 
   // Risk history: 2 students with URGENT and 3 with ELEVATED in the last days (the alert engine turns these into alerts).
   const risky = [...students].sort(() => rand() - 0.5).slice(0, 5);
-  await prisma.riskHistory.createMany({ data: risky.map((s, i) => ({
+  if (!QUIET) await prisma.riskHistory.createMany({ data: risky.map((s, i) => ({
     userId: s.id, level: i < 2 ? 'URGENT' as const : 'ELEVATED' as const, flag: i < 2 ? 'triage_urgent' : 'triage_elevated',
     policyVersion: POLICY_VERSION, createdAt: new Date(now - (i + 1) * 8 * 3_600_000),
   })) });

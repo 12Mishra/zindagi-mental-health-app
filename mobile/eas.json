@@ -8,8 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://replacement-pichunter-setup-transparent.trycloudflare.com",
-        "EXPO_PUBLIC_VOICE_WS_URL": "wss://athletes-elevation-innovations-legislature.trycloudflare.com/voice"
+        "EXPO_PUBLIC_API_URL": "https://source-coral-garcia-tuition.trycloudflare.com",
+        "EXPO_PUBLIC_VOICE_WS_URL": "wss://midwest-charity-rebel-corps.trycloudflare.com/voice"
       }
     },
     "preview": {
@@ -18,8 +18,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://replacement-pichunter-setup-transparent.trycloudflare.com",
-        "EXPO_PUBLIC_VOICE_WS_URL": "wss://athletes-elevation-innovations-legislature.trycloudflare.com/voice"
+        "EXPO_PUBLIC_API_URL": "https://source-coral-garcia-tuition.trycloudflare.com",
+        "EXPO_PUBLIC_VOICE_WS_URL": "wss://midwest-charity-rebel-corps.trycloudflare.com/voice"
       }
     },
     "production": {

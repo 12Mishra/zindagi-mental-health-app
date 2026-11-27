@@ -102,7 +102,11 @@ class VoiceSession {
     }));
   }
 
+  private framesIn = 0;
+  private diagCount = 0;
+
   private fail(code: string, recoverable: boolean) {
+    console.warn(`[voice] ${this.id} error code=${code} recoverable=${recoverable} state=${this.state} framesIn=${this.framesIn}`);
     this.event('error', { code, recoverable, message: code.replace(/_/g, ' ') });
     if (!recoverable) void this.end();
   }
@@ -111,6 +115,7 @@ class VoiceSession {
     this.lastActivity = Date.now();
     if (isBinary) {
       const frame = Buffer.from(raw as Buffer);
+      this.framesIn++;
       if (!this.auth || this.state === 'ending' || this.state === 'closed' || this.muted) return;
       if (frame.length < 2 || frame.length > 3200 || frame.length % 2) { this.fail('invalid_audio_frame', false); return; }
       this.acoustic?.add(frame);
@@ -139,6 +144,10 @@ class VoiceSession {
     else if (data.type === 'interrupt') this.cancelGeneration();
     else if (data.type === 'playback_progress') await this.playbackProgress(data);
     else if (data.type === 'end') await this.end();
+    else if (data.type === 'diag') {
+      // Client-side audio diagnostics (no audio, no transcript), capped so a buggy client cannot flood the log.
+      if (++this.diagCount <= 40) console.log(`[voice] ${this.id} diag ${JSON.stringify(data).slice(0, 300)}`);
+    }
     else this.fail('unknown_control', true);
   }
 
@@ -175,6 +184,7 @@ class VoiceSession {
       active.add(this);
       this.state = 'listening';
       this.startedAt = Date.now();
+      console.log(`[voice] ${this.id} ready`);
       this.event('ready', { format: { encoding: 'pcm_s16le', sampleRate: 16000, channels: 1 },
         playback: { encoding: 'pcm_s16le', sampleRate: 24000, channels: 1 }, model: llm.model });
       if (config.voiceLlmWarmup) void warmLisa();
@@ -552,6 +562,7 @@ class VoiceSession {
         estimatedSttCostUsd: Number((durationMinutes * config.costSttUsdPerMinute).toFixed(6)),
         estimateOnly: true });
     }
+    console.log(`[voice] ${this.id} end disconnected=${disconnected} framesIn=${this.framesIn} seconds=${this.startedAt ? Math.round((Date.now() - this.startedAt) / 1000) : 0}`);
     active.delete(this);
     clearInterval(this.timer);
     this.state = 'closed';
@@ -559,9 +570,22 @@ class VoiceSession {
   }
 }
 
+/**
+ * React Native on Android (OkHttp) sends `Origin: https://<the socket's own host>`, so the app is
+ * same-origin, and that changes with every quick-tunnel hostname. A cross-site browser page can never
+ * claim this server's own host, so allowing it does not widen what VOICE_ALLOWED_ORIGINS protects
+ * against; the one-time ticket in `hello` is still what authenticates the session.
+ */
+function sameOrigin(origin: string, host: string | undefined) {
+  if (!host) return false;
+  try { return new URL(origin).host === host; } catch { return false; }
+}
+
 wss.on('connection', (socket, request) => {
   const origin = request.headers.origin;
-  if (origin && !config.voiceAllowedOrigins.includes(origin)) {
+  const host = (request.headers['x-forwarded-host'] as string | undefined)?.split(',')[0].trim() ?? request.headers.host;
+  if (origin && !config.voiceAllowedOrigins.includes(origin) && !sameOrigin(origin, host)) {
+    console.warn(`[voice] rejected origin ${origin}`);
     socket.close(1008, 'origin_not_allowed'); return;
   }
   new VoiceSession(socket);

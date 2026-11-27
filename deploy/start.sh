@@ -4,7 +4,7 @@
 #   bash deploy/start.sh        start + print the live URLs (safe to run repeatedly)
 #   bash deploy/start.sh down   stop everything (the database volume is kept)
 #
-# Nothing is rebuilt and no migration runs. Images, schema, accounts, server/.env and the
+# Nothing is rebuilt. Pending migrations are applied (safe: never resets data). Images, schema, accounts, server/.env and the
 # zindagi_db volume all survive a reboot.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -35,6 +35,15 @@ fi
 
 # 2. containers
 $COMPOSE up -d
+
+# 2b. schema - `migrate deploy` only applies pending migrations and never resets data, so it is
+# a no-op on an existing volume and creates every table on a brand-new one.
+echo "applying database migrations..."
+if ! $COMPOSE exec -T core npx prisma migrate deploy >/dev/null 2>&1; then
+  echo "WARNING: prisma migrate deploy failed. Run: $COMPOSE exec core npx prisma migrate deploy" >&2
+else
+  $COMPOSE restart worker >/dev/null 2>&1 || true
+fi
 
 # 3. tunnels + health
 find_urls() {

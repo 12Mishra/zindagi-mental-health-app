@@ -86,6 +86,7 @@ export const config = {
   voiceLlmMaxTokens: positiveInteger('VOICE_LLM_MAX_TOKENS', 120),
   voiceLlmTemperature: optionalNumber('VOICE_LLM_TEMPERATURE', 0, 2),
   voiceLlmWarmup: flag('VOICE_LLM_WARMUP', true),
+  voiceLlmFirstTokenTimeoutMs: positiveInteger('VOICE_LLM_FIRST_TOKEN_TIMEOUT_MS', 25000),
   // TESTING ONLY: a set OPENAI_TEST_API_KEY sends Lisa's replies to OpenAI instead of VOICE_LLM_* (see lisaLlm).
   openAiTestApiKey: process.env.OPENAI_TEST_API_KEY ?? '',
   openAiTestModel: process.env.OPENAI_TEST_MODEL || 'gpt-4.1-mini',

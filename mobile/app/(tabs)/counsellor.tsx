@@ -228,9 +228,9 @@ export default function CounsellorScreen() {
     <View style={styles.card}>
       <Text style={styles.cardTitle}>Your details</Text>
       <Text style={styles.label}>Roll number</Text>
-      <TextInput style={styles.input} value={rollNumber} onChangeText={setRollNumber} placeholder="e.g. 102103456" autoCapitalize="characters" maxLength={20} />
+      <TextInput style={styles.input} value={rollNumber} onChangeText={setRollNumber} placeholder="e.g. 102103456" placeholderTextColor={ZColors.textMuted} autoCapitalize="characters" maxLength={20} />
       <Text style={styles.label}>Branch</Text>
-      <TextInput style={styles.input} value={branch} onChangeText={setBranch} placeholder="e.g. Computer Engineering" maxLength={60} />
+      <TextInput style={styles.input} value={branch} onChangeText={setBranch} placeholder="e.g. Computer Engineering" placeholderTextColor={ZColors.textMuted} maxLength={60} />
       <Text style={styles.label}>Counsellor</Text>
       <View style={styles.chips}>
         <Chip on={therapistId === null} label="Anyone available" onPress={() => setTherapistId(null)} />
@@ -427,24 +427,24 @@ const styles = StyleSheet.create({
   code: { color: ZColors.forest, fontFamily: 'monospace', letterSpacing: 0.5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   label: { color: ZColors.textSecondary, fontSize: 13, fontFamily: ZFont.semibold, marginTop: 4 },
-  input: { backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: ZRadius.small, padding: 12, fontFamily: ZFont.regular, fontSize: 16, color: ZColors.textPrimary },
+  input: { backgroundColor: ZColors.cream, borderWidth: 1.5, borderColor: ZColors.creamDark, borderRadius: ZRadius.small, padding: 12, fontFamily: ZFont.regular, fontSize: 16, color: ZColors.textPrimary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderRadius: ZRadius.pill, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: '#FFFFFF' },
-  chipOn: { backgroundColor: ZColors.forest },
-  chipText: { color: ZColors.textSecondary, fontFamily: ZFont.semibold },
+  chip: { borderRadius: ZRadius.pill, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: ZColors.cream, borderWidth: 1.5, borderColor: ZColors.creamDark },
+  chipOn: { backgroundColor: ZColors.forest, borderColor: ZColors.forest },
+  chipText: { color: ZColors.textPrimary, fontFamily: ZFont.semibold },
   chipTextOn: { color: '#fff' },
   dayStrip: { gap: 8, paddingVertical: 4 },
-  day: { width: 54, paddingVertical: 8, borderRadius: ZRadius.small, backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', gap: 2 },
-  dayOn: { backgroundColor: ZColors.forest },
+  day: { width: 54, paddingVertical: 8, borderRadius: ZRadius.small, backgroundColor: ZColors.cream, borderWidth: 1.5, borderColor: ZColors.creamDark, alignItems: 'center', gap: 2 },
+  dayOn: { backgroundColor: ZColors.forest, borderColor: ZColors.forest },
   dayWd: { color: ZColors.textMuted, fontSize: 12, fontFamily: ZFont.semibold },
   dayNum: { color: ZColors.textPrimary, fontSize: 18, fontFamily: ZFont.bold },
   dayTextOn: { color: '#fff' },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: ZColors.olive },
-  hours: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  hour: { width: '48%', flexGrow: 1, borderRadius: ZRadius.small, borderWidth: 1.5, borderColor: ZColors.creamDark, paddingVertical: 10, paddingHorizontal: 12, gap: 2 },
+  hours: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
+  hour: { width: '48.5%', borderRadius: ZRadius.small, borderWidth: 1.5, borderColor: ZColors.creamDark, paddingVertical: 10, paddingHorizontal: 12, gap: 2 },
   hourOpen: { backgroundColor: ZColors.sageLight, borderColor: ZColors.sageMid },
   hourOn: { backgroundColor: ZColors.forest, borderColor: ZColors.forest },
-  hourOff: { backgroundColor: 'rgba(255,255,255,0.7)', borderColor: ZColors.cream },
+  hourOff: { backgroundColor: ZColors.cream, borderColor: ZColors.cream },
   hourTime: { color: ZColors.textPrimary, fontSize: 15, fontFamily: ZFont.bold },
   hourLabel: { color: ZColors.textMuted, fontFamily: ZFont.regular, fontSize: 12 },
   hourLabelOpen: { color: ZColors.forest, fontFamily: ZFont.bold },
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   hourTextOff: { color: ZColors.sage },
   pickedChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: ZColors.sageLight, borderRadius: ZRadius.pill, paddingHorizontal: 10, paddingVertical: 6 },
   pickedText: { color: ZColors.forest, fontSize: 13, fontFamily: ZFont.semibold },
-  timeChip: { backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: ZRadius.pill, paddingHorizontal: 10, paddingVertical: 6 },
+  timeChip: { backgroundColor: ZColors.cream, borderRadius: ZRadius.pill, paddingHorizontal: 10, paddingVertical: 6 },
   timeChipText: { color: ZColors.textSecondary, fontSize: 13, fontFamily: ZFont.semibold },
   counsellor: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#fff', borderRadius: ZRadius.cardLg, padding: 14, ...ZShadow.subtle },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: ZColors.sageLight, alignItems: 'center', justifyContent: 'center' },

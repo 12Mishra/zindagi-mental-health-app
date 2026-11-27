@@ -8,6 +8,8 @@ import { LevelMeter, rmsFloat, toLevel } from './voice-levels';
 
 // Audio scheduled this far ahead after a start or an underrun, so the next late chunk does not leave an audible gap.
 const PLAYBACK_LEAD_S = 0.15;
+// Mic stays closed this long after Lisa's last scheduled audio ends, so the room's echo tail is not sent either.
+const ECHO_TAIL_S = 0.35;
 
 type AudioApi = typeof import('react-native-audio-api');
 
@@ -45,6 +47,7 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   const resampler = new PcmResampler();
   const meter = new LevelMeter();
   const appState = AppState.addEventListener('change', state => {
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ v: 1, type: 'diag', step: 'appState', state }));
     if (state !== 'active') stop();
   });
 
@@ -58,7 +61,8 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     nextPlaybackTime = context?.currentTime ?? 0;
   };
   const cleanup = () => {
-    try { recorder?.clearOnAudioReady(); recorder?.stop(); } catch {}
+    if (statsTimer) { clearInterval(statsTimer); statsTimer = null; }
+    try { recorder?.clearOnAudioReady(); recorder?.clearOnError(); void recorder?.stop().catch(() => {}); } catch {}
     recorder = null;
     stopAudio();
     void context?.close(); context = null;
@@ -73,9 +77,21 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
   const play = (bytes: ArrayBuffer, event: VoiceEvent) => {
     if (!context || event.generationId !== currentGeneration || bytes.byteLength % 2) return;
     const pcm = new DataView(bytes);
-    const buffer = context.createBuffer(1, bytes.byteLength / 2, 24000);
+    const inputFrames = bytes.byteLength / 2;
+    // react-native-audio-api 0.13 reads a buffer at the *context* rate and ignores the buffer's own rate, so 24 kHz
+    // speech in a 48 kHz context plays at double speed. Resample to the context rate here (linear is fine for speech).
+    const outputRate = context.sampleRate;
+    const ratio = outputRate / 24000;
+    const outputFrames = Math.max(1, Math.round(inputFrames * ratio));
+    const buffer = context.createBuffer(1, outputFrames, outputRate);
     const channel = buffer.getChannelData(0);
-    for (let i = 0; i < channel.length; i++) channel[i] = pcm.getInt16(i * 2, true) / 32768;
+    for (let i = 0; i < outputFrames; i++) {
+      const position = i / ratio;
+      const index = Math.floor(position);
+      const a = pcm.getInt16(Math.min(index, inputFrames - 1) * 2, true);
+      const b = pcm.getInt16(Math.min(index + 1, inputFrames - 1) * 2, true);
+      channel[i] = (a + (b - a) * (position - index)) / 32768;
+    }
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(context.destination);
@@ -83,25 +99,58 @@ export function createVoiceClient(options: VoiceClientOptions): VoiceClient {
     source.onEnded = () => sources.delete(source);
     // Back-to-back chunks play seamlessly; after a start or an underrun, rebuild a small cushion first.
     const when = nextPlaybackTime > context.currentTime ? nextPlaybackTime : context.currentTime + PLAYBACK_LEAD_S;
-    source.start(when); meter.schedule(channel, 24000, when); nextPlaybackTime = when + buffer.duration;
+    source.start(when); meter.schedule(channel, outputRate, when); nextPlaybackTime = when + buffer.duration;
     if (typeof event.segmentIndex === 'number') lastSource.set(event.segmentIndex, source);
   };
+  // Capture diagnostics, sent to the voice server's log as `diag` control messages (counts and statuses only, never
+  // audio). Phones have no console we can read, so this is how a silent microphone gets explained.
+  const stats = { callbacks: 0, skippedNotOpen: 0, skippedBuffered: 0, skippedEcho: 0, framesSent: 0, errors: 0, rate: 0, numFrames: 0, lastError: '' };
+  let statsTimer: ReturnType<typeof setInterval> | null = null;
+  let statsReports = 0;
+  const diag = (step: string, extra: Record<string, unknown> = {}) => send({ type: 'diag', step, ...extra });
   const beginCapture = async () => {
-    if (await AudioManager.requestRecordingPermissions() !== 'Granted') throw new Error('Microphone permission denied.');
-    AudioManager.setAudioSessionOptions({ iosCategory: 'playAndRecord', iosMode: 'voiceChat', iosOptions: ['defaultToSpeaker'] });
-    await AudioManager.setAudioSessionActivity(true);
-    context = new AudioContext();
-    await context.resume();
-    recorder = new AudioRecorder();
-    const ready = recorder.onAudioReady({ sampleRate: 16000, bufferLength: 1600, channelCount: 1 }, ({ buffer, numFrames }) => {
-      if (socket?.readyState !== WebSocket.OPEN || socket.bufferedAmount > 64 * 1024) return;
-      const samples = buffer.getChannelData(0).subarray(0, numFrames);
-      meter.pushMic(toLevel(rmsFloat(samples)));
-      resampler.push(samples, buffer.sampleRate, frame => socket?.send(frame));
-    });
-    if (ready.status === 'error') throw new Error('Could not configure native audio callback.');
-    const started = recorder.start();
-    if (started.status === 'error') throw new Error('Could not start native microphone.');
+    try {
+      const permission = await AudioManager.requestRecordingPermissions();
+      diag('permission', { permission });
+      if (permission !== 'Granted') throw new Error('Microphone permission denied.');
+      AudioManager.setAudioSessionOptions({ iosCategory: 'playAndRecord', iosMode: 'voiceChat', iosOptions: ['defaultToSpeaker'] });
+      await AudioManager.setAudioSessionActivity(true);
+      context = new AudioContext();
+      await context.resume();
+      diag('context', { sampleRate: context.sampleRate, state: context.state });
+      recorder = new AudioRecorder();
+      const ready = recorder.onAudioReady({ sampleRate: 16000, bufferLength: 1600, channelCount: 1 }, ({ buffer, numFrames }) => {
+        stats.callbacks++;
+        try {
+          if (socket?.readyState !== WebSocket.OPEN) { stats.skippedNotOpen++; return; }
+          if ((socket.bufferedAmount ?? 0) > 64 * 1024) { stats.skippedBuffered++; return; }
+          // Half-duplex: Android's recorder here has no echo cancellation, so on speakerphone the mic hears Lisa and
+          // the server takes her own voice as the student barging in. Hold the mic while her audio is playing, plus a
+          // short tail for room echo, and resume as soon as she finishes.
+          if (context && context.currentTime < nextPlaybackTime + ECHO_TAIL_S) { stats.skippedEcho++; return; }
+          stats.rate = buffer.sampleRate; stats.numFrames = numFrames;
+          const samples = buffer.getChannelData(0).subarray(0, numFrames);
+          meter.pushMic(toLevel(rmsFloat(samples)));
+          resampler.push(samples, buffer.sampleRate, frame => { stats.framesSent++; socket?.send(frame); });
+        } catch (error) {
+          stats.errors++; stats.lastError = String(error).slice(0, 120);
+        }
+      });
+      diag('onAudioReady', { status: ready.status, message: ready.status === 'error' ? ready.message : undefined });
+      if (ready.status === 'error') throw new Error(`Could not configure native audio callback: ${ready.message}`);
+      recorder.onError(({ message }) => { diag('recorderError', { message }); options.onError(`Microphone error: ${message}`); });
+      // start() is async in react-native-audio-api 0.13; without the await a failed start was silently ignored.
+      const started = await recorder.start();
+      diag('start', { status: started.status, message: started.status === 'error' ? started.message : undefined });
+      if (started.status === 'error') throw new Error(`Could not start the microphone: ${started.message ?? 'unknown error'}`);
+      statsTimer = setInterval(() => {
+        if (++statsReports > 15) { if (statsTimer) clearInterval(statsTimer); return; }
+        diag('stats', { ...stats });
+      }, 2000);
+    } catch (error) {
+      diag('captureFailed', { error: String(error).slice(0, 200) });
+      throw error;
+    }
   };
 
   return {
